@@ -3,11 +3,10 @@ package tec.asistencias.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tec.asistencias.dto.AsistenciaRequest;
+import tec.asistencias.dto.AsistenciaResponse;
 import tec.asistencias.dto.CambioEstadoAsistenciaRequest;
-import tec.asistencias.entity.Activo;
-import tec.asistencias.entity.Asistencia;
-import tec.asistencias.entity.EstadoAsistencia;
-import tec.asistencias.entity.HistorialEstadoAsistencia;
+import tec.asistencias.entity.*;
 import tec.asistencias.repository.*;
 import tec.asistencias.exception.BusinessException;
 import tec.asistencias.exception.ResourceNotFoundException;
@@ -25,125 +24,305 @@ public class AsistenciaService {
     private final HistorialEstadoAsistenciaRepository historialEstadoAsistenciaRepository;
     private final EstadoActivoRepository estadoActivoRepository;
     private final ActivoRepository activoRepository;
+    private final EmpleadoRepository empleadoRepository;
+    private final TipoAsistenciaRepository tipoAsistenciaRepository;
 
-    public List<Asistencia> listarTodas() {
-        return asistenciaRepository.findAll();
+    public List<AsistenciaResponse> listarTodas() {
+
+        return asistenciaRepository.findAll()
+                .stream()
+                .map(this::convertirAResponse)
+                .toList();
     }
 
-    public Optional<Asistencia> buscarPorId(Long id) {
-        return asistenciaRepository.findById(id);
+    public Optional<AsistenciaResponse> buscarPorId(Long id) {
+
+        return asistenciaRepository.findById(id)
+                .map(this::convertirAResponse);
     }
 
-    public Optional<Asistencia> buscarPorNumero(
+    public Optional<AsistenciaResponse> buscarPorNumero(
             String numeroAsistencia) {
 
         return asistenciaRepository
-                .findByNumeroAsistencia(numeroAsistencia);
+                .findByNumeroAsistencia(numeroAsistencia)
+                .map(this::convertirAResponse);
     }
 
-    public List<Asistencia> listarPorActivo(Long activoId) {
+    public List<AsistenciaResponse> listarPorActivo(Long activoId) {
         return asistenciaRepository
-                .findByActivoIdOrderByFechaIngresoDesc(activoId);
+                .findByActivoIdOrderByFechaIngresoDesc(activoId)
+                .stream()
+                .map(this::convertirAResponse)
+                .toList();
     }
 
-    public List<Asistencia> listarPorEmpleado(Long empleadoId) {
+    public List<AsistenciaResponse> listarPorEmpleado(Long empleadoId) {
         return asistenciaRepository
-                .findByEmpleadoIdOrderByFechaIngresoDesc(empleadoId);
+                .findByEmpleadoIdOrderByFechaIngresoDesc(empleadoId)
+                .stream()
+                .map(this::convertirAResponse)
+                .toList();
     }
 
-    public List<Asistencia> listarPorTecnico(Long tecnicoId) {
+    public List<AsistenciaResponse> listarPorTecnico(Long tecnicoId) {
         return asistenciaRepository
-                .findByTecnicoIdOrderByFechaIngresoDesc(tecnicoId);
-    }
-
-    public Asistencia guardar(Asistencia asistencia) {
-
-        /*
-         * Si estamos creando una nueva asistencia,
-         * verificamos que el activo no tenga otra abierta.
-         */
-        if (asistencia.getId() == null) {
-
-            List<Asistencia> asistencias =
-                    asistenciaRepository
-                            .findByActivoIdOrderByFechaIngresoDesc(
-                                    asistencia.getActivo().getId()
-                            );
-
-            boolean existeAbierta = asistencias.stream()
-                    .anyMatch(a -> a.getFechaCierre() == null);
-
-            if (existeAbierta) {
-                throw new BusinessException(
-                        "El activo ya tiene una asistencia abierta."
-                );
-            }
-        }
-
-        return asistenciaRepository.save(asistencia);
+                .findByTecnicoIdOrderByFechaIngresoDesc(tecnicoId)
+                .stream()
+                .map(this::convertirAResponse)
+                .toList();
     }
 
     @Transactional
-    public Asistencia cambiarEstado(Long asistenciaId, CambioEstadoAsistenciaRequest request){
-
-        Asistencia asistencia = asistenciaRepository
-                .findById(asistenciaId)
+    public AsistenciaResponse guardar(AsistenciaRequest request) {
+        Activo activo = activoRepository.findById(request.getActivoId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "No existe la asistencia con ID: " + asistenciaId
+                                "No existe el activo con ID: "
+                                        + request.getActivoId()
                         )
                 );
 
-        EstadoAsistencia nuevoEstado = estadoAsistenciaRepository
-                .findById(request.getEstadoAsistenciaId())
+        Empleado empleado = empleadoRepository.findById(
+                        request.getEmpleadoId()
+                )
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "No existe el estado de asistencia con ID: "
-                                        + request.getEstadoAsistenciaId()
-                        ));
+                                "No existe el empleado con ID: "
+                                        + request.getEmpleadoId()
+                        )
+                );
 
-        String estadoActual = asistencia.getEstadoAsistencia().getNombre();
-        String estadoNuevo = nuevoEstado.getNombre();
+        Empleado tecnico = empleadoRepository.findById(
+                        request.getTecnicoId()
+                )
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No existe el técnico con ID: "
+                                        + request.getTecnicoId()
+                        )
+                );
 
-        validarTransicion(estadoActual, estadoNuevo);
+        TipoAsistencia tipoAsistencia =
+                tipoAsistenciaRepository.findById(
+                                request.getTipoAsistenciaId()
+                        )
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "No existe el tipo de asistencia con ID: "
+                                                + request.getTipoAsistenciaId()
+                                )
+                        );
 
-        asistencia.setEstadoAsistencia(nuevoEstado);
+        // Verificar que el activo no tenga otra asistencia abierta
+        List<Asistencia> asistencias =
+                asistenciaRepository
+                        .findByActivoIdOrderByFechaIngresoDesc(
+                                request.getActivoId()
+                        );
 
-        /*
-         * Si la asistencia llega a ENTREGADO,
-         * registramos automáticamente la fecha de cierre.
-         */
-        if("ENTREGADO".equals(estadoNuevo)){
-            asistencia.setFechaCierre(LocalDateTime.now());
+        boolean existeAbierta = asistencias.stream()
+                .anyMatch(a -> a.getFechaCierre() == null);
+
+        if (existeAbierta) {
+            throw new BusinessException(
+                    "El activo ya tiene una asistencia abierta."
+            );
         }
 
-        Asistencia asistenciaGuardada = asistenciaRepository.save(asistencia);
+        // El sistema asigna automáticamente RECIBIDO
+        EstadoAsistencia estadoRecibido =
+                estadoAsistenciaRepository
+                        .findByNombre("RECIBIDO")
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "No existe el estado de asistencia RECIBIDO."
+                                )
+                        );
 
-        /*
-         * Registrar automáticamente el cambio
-         * en el historial.
-         */
-
-        HistorialEstadoAsistencia historial = HistorialEstadoAsistencia.builder()
-                .asistencia(asistenciaGuardada)
-                .estadoAsistencia(nuevoEstado)
-                .comentario(request.getComentario())
+        Asistencia asistencia = Asistencia.builder()
+                .numeroAsistencia(request.getNumeroAsistencia())
+                .activo(activo)
+                .empleado(empleado)
+                .tecnico(tecnico)
+                .tipoAsistencia(tipoAsistencia)
+                .estadoAsistencia(estadoRecibido)
+                .problemaReportado(request.getProblemaReportado())
+                .diagnostico(request.getDiagnostico())
+                .trabajoRealizado(request.getTrabajoRealizado())
+                .observaciones(request.getObservaciones())
                 .build();
+
+        Asistencia guardada = asistenciaRepository.save(asistencia);
+
+        // El activo entra a mantenimiento desde que ingresa a informática
+        actualizarEstadoActivo(
+                activo,
+                "RECIBIDO"
+        );
+
+        // Registrar estado inicial en el historial
+        HistorialEstadoAsistencia historial =
+                HistorialEstadoAsistencia.builder()
+                        .asistencia(guardada)
+                        .estadoAsistencia(estadoRecibido)
+                        .comentario("Asistencia creada")
+                        .build();
 
         historialEstadoAsistenciaRepository.save(historial);
 
-        /*
-         * Actualizar el estado general del activo.
-         */
-
-        actualizarEstadoActivo(asistencia.getActivo(), estadoNuevo);
-
-        return asistenciaGuardada;
+        return convertirAResponse(guardada);
     }
 
-    private void validarTransicion(String estadoActual, String estadoNuevo){
+    // ACTUALIZAR
+    @Transactional
+    public AsistenciaResponse actualizar(
+            Long id,
+            AsistenciaRequest request) {
 
-        if(estadoActual.equals(estadoNuevo)){
+        Asistencia asistencia = asistenciaRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No existe la asistencia con ID: " + id
+                        )
+                );
+
+        Activo activo = activoRepository.findById(request.getActivoId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No existe el activo con ID: "
+                                        + request.getActivoId()
+                        )
+                );
+
+        Empleado empleado = empleadoRepository.findById(
+                        request.getEmpleadoId()
+                )
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No existe el empleado con ID: "
+                                        + request.getEmpleadoId()
+                        )
+                );
+
+        Empleado tecnico = empleadoRepository.findById(
+                        request.getTecnicoId()
+                )
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No existe el técnico con ID: "
+                                        + request.getTecnicoId()
+                        )
+                );
+
+        TipoAsistencia tipoAsistencia =
+                tipoAsistenciaRepository.findById(
+                                request.getTipoAsistenciaId()
+                        )
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "No existe el tipo de asistencia con ID: "
+                                                + request.getTipoAsistenciaId()
+                                )
+                        );
+
+        asistencia.setNumeroAsistencia(
+                request.getNumeroAsistencia()
+        );
+        asistencia.setActivo(activo);
+        asistencia.setEmpleado(empleado);
+        asistencia.setTecnico(tecnico);
+        asistencia.setTipoAsistencia(tipoAsistencia);
+        asistencia.setProblemaReportado(
+                request.getProblemaReportado()
+        );
+        asistencia.setDiagnostico(
+                request.getDiagnostico()
+        );
+        asistencia.setTrabajoRealizado(
+                request.getTrabajoRealizado()
+        );
+        asistencia.setObservaciones(
+                request.getObservaciones()
+        );
+
+        Asistencia actualizada =
+                asistenciaRepository.save(asistencia);
+
+        return convertirAResponse(actualizada);
+    }
+
+    // CAMBIAR ESTADO
+    @Transactional
+    public AsistenciaResponse cambiarEstado(
+            Long asistenciaId,
+            CambioEstadoAsistenciaRequest request) {
+
+        Asistencia asistencia =
+                asistenciaRepository.findById(asistenciaId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "No existe la asistencia con ID: "
+                                                + asistenciaId
+                                )
+                        );
+
+        EstadoAsistencia nuevoEstado =
+                estadoAsistenciaRepository.findById(
+                                request.getEstadoAsistenciaId()
+                        )
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "No existe el estado de asistencia con ID: "
+                                                + request.getEstadoAsistenciaId()
+                                )
+                        );
+
+        String estadoActual =
+                asistencia.getEstadoAsistencia().getNombre();
+
+        String estadoNuevo =
+                nuevoEstado.getNombre();
+
+        validarTransicion(
+                estadoActual,
+                estadoNuevo
+        );
+
+        asistencia.setEstadoAsistencia(nuevoEstado);
+
+        if ("ENTREGADO".equals(estadoNuevo)) {
+            asistencia.setFechaCierre(
+                    LocalDateTime.now()
+            );
+        }
+
+        Asistencia asistenciaGuardada =
+                asistenciaRepository.save(asistencia);
+
+        HistorialEstadoAsistencia historial =
+                HistorialEstadoAsistencia.builder()
+                        .asistencia(asistenciaGuardada)
+                        .estadoAsistencia(nuevoEstado)
+                        .comentario(request.getComentario())
+                        .build();
+
+        historialEstadoAsistenciaRepository.save(historial);
+
+        actualizarEstadoActivo(
+                asistencia.getActivo(),
+                estadoNuevo
+        );
+
+        return convertirAResponse(asistenciaGuardada);
+    }
+
+    // VALIDAR TRANSICIONES
+    private void validarTransicion(
+            String estadoActual,
+            String estadoNuevo) {
+
+        if (estadoActual.equals(estadoNuevo)) {
             throw new BusinessException(
                     "La asistencia ya se encuentra en el estado "
                             + estadoActual
@@ -151,26 +330,14 @@ public class AsistenciaService {
         }
 
         boolean permitida = switch (estadoActual) {
-
-            case "RECIBIDO" ->
-                    estadoNuevo.equals("EN DIAGNOSTICO");
-
-            case "EN DIAGNOSTICO" ->
-                    estadoNuevo.equals("EN MANTENIMIENTO")
-                            || estadoNuevo.equals("ESPERANDO REPUESTO");
-
-            case "EN MANTENIMIENTO" ->
-                    estadoNuevo.equals("ESPERANDO REPUESTO")
-                            || estadoNuevo.equals("PARA ENTREGAR");
-
-            case "ESPERANDO REPUESTO" ->
-                    estadoNuevo.equals("EN MANTENIMIENTO");
-
-            case "PARA ENTREGAR" ->
-                    estadoNuevo.equals("ENTREGADO");
-
-            default ->
-                    false;
+            case "RECIBIDO" -> estadoNuevo.equals("EN DIAGNOSTICO");
+            case "EN DIAGNOSTICO" -> estadoNuevo.equals("EN MANTENIMIENTO")
+                    || estadoNuevo.equals("ESPERANDO REPUESTO");
+            case "EN MANTENIMIENTO" -> estadoNuevo.equals("ESPERANDO REPUESTO")
+                    || estadoNuevo.equals("PARA ENTREGAR");
+            case "ESPERANDO REPUESTO" -> estadoNuevo.equals("EN MANTENIMIENTO");
+            case "PARA ENTREGAR" -> estadoNuevo.equals("ENTREGADO");
+            default -> false;
         };
 
         if (!permitida) {
@@ -183,15 +350,11 @@ public class AsistenciaService {
         }
     }
 
+    // ACTUALIZAR ESTADO DEL ACTIVO
     private void actualizarEstadoActivo(
-
             Activo activo,
             String estadoAsistencia) {
 
-        /*
-         * Cuando el equipo entra al proceso de asistencia,
-         * pasa a MANTENIMIENTO.
-         */
         if ("RECIBIDO".equals(estadoAsistencia)
                 || "EN DIAGNOSTICO".equals(estadoAsistencia)
                 || "EN MANTENIMIENTO".equals(estadoAsistencia)
@@ -204,10 +367,6 @@ public class AsistenciaService {
             activoRepository.save(activo);
         }
 
-        /*
-         * Cuando se entrega el equipo,
-         * vuelve al estado ACTIVO.
-         */
         if ("ENTREGADO".equals(estadoAsistencia)) {
 
             estadoActivoRepository
@@ -218,7 +377,97 @@ public class AsistenciaService {
         }
     }
 
+    // ELIMINAR
     public void eliminar(Long id) {
+
+        if (!asistenciaRepository.existsById(id)) {
+            throw new ResourceNotFoundException(
+                    "No existe la asistencia con ID: " + id
+            );
+        }
+
         asistenciaRepository.deleteById(id);
+    }
+
+    // CONVERTIR ENTITY → RESPONSE
+    private AsistenciaResponse convertirAResponse(
+            Asistencia asistencia) {
+
+        return AsistenciaResponse.builder()
+                .id(asistencia.getId())
+                .numeroAsistencia(
+                        asistencia.getNumeroAsistencia()
+                )
+
+                .activoId(
+                        asistencia.getActivo().getId()
+                )
+                .activoNombre(
+                        asistencia.getActivo().getNombre()
+                )
+                .codigoActivo(
+                        asistencia.getActivo().getCodigoActivo()
+                )
+
+                .empleadoId(
+                        asistencia.getEmpleado().getId()
+                )
+                .empleadoNombre(
+                        asistencia.getEmpleado().getNombres()
+                                + " "
+                                + asistencia.getEmpleado().getApellidos()
+                )
+
+                .tecnicoId(
+                        asistencia.getTecnico().getId()
+                )
+                .tecnicoNombre(
+                        asistencia.getTecnico().getNombres()
+                                + " "
+                                + asistencia.getTecnico().getApellidos()
+                )
+
+                .tipoAsistenciaId(
+                        asistencia.getTipoAsistencia().getId()
+                )
+                .tipoAsistenciaNombre(
+                        asistencia.getTipoAsistencia().getNombre()
+                )
+
+                .estadoAsistenciaId(
+                        asistencia.getEstadoAsistencia().getId()
+                )
+                .estadoAsistenciaNombre(
+                        asistencia.getEstadoAsistencia().getNombre()
+                )
+
+                .fechaIngreso(
+                        asistencia.getFechaIngreso()
+                )
+                .fechaCierre(
+                        asistencia.getFechaCierre()
+                )
+
+                .problemaReportado(
+                        asistencia.getProblemaReportado()
+                )
+                .diagnostico(
+                        asistencia.getDiagnostico()
+                )
+                .trabajoRealizado(
+                        asistencia.getTrabajoRealizado()
+                )
+                .observaciones(
+                        asistencia.getObservaciones()
+                )
+
+                .createdAt(
+                        asistencia.getCreatedAt()
+                )
+                .updatedAt(
+                        asistencia.getUpdatedAt()
+                )
+
+                .build();
     }
 }

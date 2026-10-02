@@ -1,9 +1,13 @@
 package tec.asistencias.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import tec.asistencias.entity.Empleado;
+import tec.asistencias.dto.EmpleadoRequest;
+import tec.asistencias.dto.EmpleadoResponse;
+import tec.asistencias.exception.ResourceNotFoundException;
 import tec.asistencias.service.EmpleadoService;
 
 import java.util.List;
@@ -17,49 +21,43 @@ public class EmpleadoController {
     private final EmpleadoService empleadoService;
 
     @GetMapping
-    public ResponseEntity<List<Empleado>> listarTodos(){
+    public ResponseEntity<List<EmpleadoResponse>> listarTodos(){
+
         return ResponseEntity.ok(empleadoService.listarTodos());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Empleado> buscarPorId(@PathVariable Long id){
+    public ResponseEntity<EmpleadoResponse> buscarPorId(@PathVariable Long id){
         return empleadoService.buscarPorId(id)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No existe el empleado con ID: " + id
+                        ));
     }
 
     @PostMapping
-    public ResponseEntity<Empleado> guardar(@RequestBody Empleado empleado){
-        return ResponseEntity.ok(empleadoService.guardar(empleado));
+    public ResponseEntity<EmpleadoResponse> guardar(@Valid @RequestBody EmpleadoRequest request){
+        return ResponseEntity.status(HttpStatus.CREATED).body(empleadoService.guardar(request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Empleado> actualizar(@PathVariable Long id, @RequestBody Empleado empleado){
-        return empleadoService.buscarPorId(id)
-                .map(empleadoExistente ->{
-                    empleadoExistente.setCodigoEmpleado(empleado.getCodigoEmpleado());
-                    empleadoExistente.setNombres(empleado.getNombres());
-                    empleadoExistente.setApellidos(empleado.getApellidos());
-                    empleadoExistente.setDocumento(empleado.getDocumento());
-                    empleadoExistente.setCargo(empleado.getCargo());
-                    empleadoExistente.setTelefono(empleado.getTelefono());
-                    empleadoExistente.setCorreo(empleado.getCorreo());
-                    empleadoExistente.setActivo(empleado.getActivo());
-                    empleadoExistente.setUnidad(empleado.getUnidad());
+    public ResponseEntity<EmpleadoResponse> actualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody EmpleadoRequest request) {
 
-                    return ResponseEntity.ok(empleadoService.guardar(empleadoExistente));
-                })
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(
+                empleadoService.actualizar(id, request)
+        );
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id){
-        return empleadoService.buscarPorId(id)
-                .map(empleado -> {
-                    empleadoService.eliminar(id);
-                    return ResponseEntity.noContent().<Void>build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Void> eliminar(
+            @PathVariable Long id) {
+
+        empleadoService.eliminar(id);
+
+        return ResponseEntity.noContent().build();
     }
 
 }

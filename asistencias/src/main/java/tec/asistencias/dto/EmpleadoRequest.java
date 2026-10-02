@@ -15,11 +15,11 @@ public class EmpleadoRequest {
 
     @NotBlank(message = "El código de esmpledo es obligatorio")
     @Size(max = 30, message = "El código de empleado no puede superar los 30 caracteres")
-    private String codigoEmpledo;
+    private String codigoEmpleado;
 
     @NotBlank(message = "Los nombres son obligatorios")
     @Size(max = 100, message = "Los nombres no pueden superar los 100 caracteres")
-    private String nombre;
+    private String nombres;
 
     @NotBlank(message = "Los appellidos son obligatorios")
     @Size(max = 100, message = "Los apellido no pueden superar los 100 caracteres")

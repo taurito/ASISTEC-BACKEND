@@ -2,10 +2,13 @@ package tec.asistencias.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import tec.asistencias.dto.AsistenciaRequest;
+import tec.asistencias.dto.AsistenciaResponse;
 import tec.asistencias.dto.CambioEstadoAsistenciaRequest;
-import tec.asistencias.entity.Asistencia;
+import tec.asistencias.exception.ResourceNotFoundException;
 import tec.asistencias.service.AsistenciaService;
 
 import java.util.List;
@@ -17,35 +20,49 @@ public class AsistenciaController {
 
     private final AsistenciaService asistenciaService;
 
+    // LISTAR TODAS
     @GetMapping
-    public ResponseEntity<List<Asistencia>> listarTodas() {
+    public ResponseEntity<List<AsistenciaResponse>> listar() {
 
         return ResponseEntity.ok(
                 asistenciaService.listarTodas()
         );
     }
 
+    // BUSCAR POR ID
     @GetMapping("/{id}")
-    public ResponseEntity<Asistencia> buscarPorId(
+    public ResponseEntity<AsistenciaResponse> buscarPorId(
             @PathVariable Long id) {
 
         return asistenciaService.buscarPorId(id)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No existe la asistencia con ID: "
+                                        + id
+                        )
+                );
     }
 
+    // BUSCAR POR NUMERO
     @GetMapping("/numero/{numeroAsistencia}")
-    public ResponseEntity<Asistencia> buscarPorNumero(
+    public ResponseEntity<AsistenciaResponse> buscarPorNumero(
             @PathVariable String numeroAsistencia) {
 
         return asistenciaService
                 .buscarPorNumero(numeroAsistencia)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No existe la asistencia con número: "
+                                        + numeroAsistencia
+                        )
+                );
     }
 
+    // LISTAR POR ACTIVO
     @GetMapping("/activo/{activoId}")
-    public ResponseEntity<List<Asistencia>> listarPorActivo(
+    public ResponseEntity<List<AsistenciaResponse>> listarPorActivo(
             @PathVariable Long activoId) {
 
         return ResponseEntity.ok(
@@ -53,8 +70,9 @@ public class AsistenciaController {
         );
     }
 
+    // LISTAR POR EMPLEADO
     @GetMapping("/empleado/{empleadoId}")
-    public ResponseEntity<List<Asistencia>> listarPorEmpleado(
+    public ResponseEntity<List<AsistenciaResponse>> listarPorEmpleado(
             @PathVariable Long empleadoId) {
 
         return ResponseEntity.ok(
@@ -62,8 +80,9 @@ public class AsistenciaController {
         );
     }
 
+    // LISTAR POR TECNICO
     @GetMapping("/tecnico/{tecnicoId}")
-    public ResponseEntity<List<Asistencia>> listarPorTecnico(
+    public ResponseEntity<List<AsistenciaResponse>> listarPorTecnico(
             @PathVariable Long tecnicoId) {
 
         return ResponseEntity.ok(
@@ -71,96 +90,51 @@ public class AsistenciaController {
         );
     }
 
+    // CREAR
     @PostMapping
-    public ResponseEntity<Asistencia> guardar(
-            @RequestBody Asistencia asistencia) {
+    public ResponseEntity<AsistenciaResponse> crear(
+            @Valid @RequestBody AsistenciaRequest request) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(asistenciaService.guardar(request));
+    }
+
+    // ACTUALIZAR
+    @PutMapping("/{id}")
+    public ResponseEntity<AsistenciaResponse> actualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody AsistenciaRequest request) {
 
         return ResponseEntity.ok(
-                asistenciaService.guardar(asistencia)
+                asistenciaService.actualizar(
+                        id,
+                        request
+                )
         );
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Asistencia> actualizar(
-            @PathVariable Long id,
-            @RequestBody Asistencia asistencia) {
-
-        return asistenciaService.buscarPorId(id)
-                .map(existente -> {
-
-                    existente.setNumeroAsistencia(
-                            asistencia.getNumeroAsistencia()
-                    );
-
-                    existente.setActivo(
-                            asistencia.getActivo()
-                    );
-
-                    existente.setEmpleado(
-                            asistencia.getEmpleado()
-                    );
-
-                    existente.setTecnico(
-                            asistencia.getTecnico()
-                    );
-
-                    existente.setTipoAsistencia(
-                            asistencia.getTipoAsistencia()
-                    );
-
-                    existente.setFechaIngreso(
-                            asistencia.getFechaIngreso()
-                    );
-
-                    existente.setFechaCierre(
-                            asistencia.getFechaCierre()
-                    );
-
-                    existente.setProblemaReportado(
-                            asistencia.getProblemaReportado()
-                    );
-
-                    existente.setDiagnostico(
-                            asistencia.getDiagnostico()
-                    );
-
-                    existente.setTrabajoRealizado(
-                            asistencia.getTrabajoRealizado()
-                    );
-
-                    existente.setObservaciones(
-                            asistencia.getObservaciones()
-                    );
-
-                    return ResponseEntity.ok(
-                            asistenciaService.guardar(existente)
-                    );
-                })
-                .orElse(ResponseEntity.notFound().build());
-    }
-
+    // CAMBIAR ESTADO
     @PatchMapping("/{id}/estado")
-    public ResponseEntity<Asistencia> cambiarEstado(
+    public ResponseEntity<AsistenciaResponse> cambiarEstado(
             @PathVariable Long id,
             @Valid @RequestBody CambioEstadoAsistenciaRequest request) {
 
         return ResponseEntity.ok(
-                asistenciaService.cambiarEstado(id, request)
+                asistenciaService.cambiarEstado(
+                        id,
+                        request
+                )
         );
     }
 
+    // ELIMINAR
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(
             @PathVariable Long id) {
 
-        return asistenciaService.buscarPorId(id)
-                .map(asistencia -> {
+        asistenciaService.eliminar(id);
 
-                    asistenciaService.eliminar(id);
-
-                    return ResponseEntity.noContent()
-                            .<Void>build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,9 +1,13 @@
 package tec.asistencias.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import tec.asistencias.entity.Activo;
+import tec.asistencias.dto.ActivoRequest;
+import tec.asistencias.dto.ActivoResponse;
+import tec.asistencias.exception.ResourceNotFoundException;
 import tec.asistencias.service.ActivoService;
 
 import java.util.List;
@@ -16,49 +20,46 @@ public class ActivoController {
     private final ActivoService activoService;
 
     @GetMapping
-    public ResponseEntity<List<Activo>> listarTodos(){
+    public ResponseEntity<List<ActivoResponse>> listarTodos(){
+
         return ResponseEntity.ok(activoService.listarTodos());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Activo> buscarPorId(@PathVariable Long id){
+    public ResponseEntity<ActivoResponse> buscarPorId(@PathVariable Long id){
         return activoService.buscarPorId(id)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No existe el activo con ID: " + id
+                        )
+                );
     }
 
     @PostMapping
-    public ResponseEntity<Activo> guardar(@RequestBody Activo activo){
-        return ResponseEntity.ok(activoService.guardar(activo));
+    public ResponseEntity<ActivoResponse> guardar(@Valid @RequestBody ActivoRequest request){
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(activoService.guardar(request));
     }
 
+    // ACTUALIZAR
     @PutMapping("/{id}")
-    public ResponseEntity<Activo> actualizar(@PathVariable Long id, @RequestBody Activo activo){
-        return activoService.buscarPorId(id)
-                .map(existente ->{
+    public ResponseEntity<ActivoResponse> actualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody ActivoRequest request) {
 
-                    existente.setNombre(activo.getNombre());
-                    existente.setModelo(activo.getModelo());
-                    existente.setSerie(activo.getSerie());
-                    existente.setCodigoActivo(activo.getCodigoActivo());
-                    existente.setTipoActivo(activo.getTipoActivo());
-                    existente.setMarca(activo.getMarca());
-                    existente.setEstadoActivo(activo.getEstadoActivo());
-                    existente.setActivo(activo.getActivo());
-
-                    return ResponseEntity.ok(activoService.guardar(existente));
-                })
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(
+                activoService.actualizar(id, request)
+        );
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id){
+    public ResponseEntity<Void> eliminar(
+            @PathVariable Long id) {
 
-        return activoService.buscarPorId(id)
-                .map(activo -> {
-                    activoService.eliminar(id);
-                    return ResponseEntity.noContent().<Void>build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+        activoService.eliminar(id);
+
+        return ResponseEntity.noContent().build();
     }
 }
