@@ -3,7 +3,7 @@ package tec.asistencias.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import tec.asistencias.entity.HistorialEstadoAsistencia;
+import tec.asistencias.dto.HistorialEstadoAsistenciaResponse;
 import tec.asistencias.service.HistorialEstadoAsistenciaService;
 
 import java.util.List;
@@ -13,28 +13,32 @@ import java.util.List;
 @RequiredArgsConstructor
 public class HistorialEstadoAsistenciaController {
 
-    private final HistorialEstadoAsistenciaService historialEstadoAsistenciaService;
+    private final HistorialEstadoAsistenciaService
+            historialEstadoAsistenciaService;
 
+    // LISTAR TODOS
     @GetMapping
-    public ResponseEntity<List<HistorialEstadoAsistencia>> listarTodos() {
+    public ResponseEntity<List<HistorialEstadoAsistenciaResponse>>
+    listar() {
 
         return ResponseEntity.ok(
                 historialEstadoAsistenciaService.listarTodos()
         );
     }
 
+    // BUSCAR POR ID
     @GetMapping("/{id}")
-    public ResponseEntity<HistorialEstadoAsistencia> buscarPorId(
-            @PathVariable Long id) {
+    public ResponseEntity<HistorialEstadoAsistenciaResponse>
+    buscarPorId(@PathVariable Long id) {
 
-        return historialEstadoAsistenciaService
-                .buscarPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(
+                historialEstadoAsistenciaService.buscarPorId(id)
+        );
     }
 
+    // LISTAR POR ASISTENCIA
     @GetMapping("/asistencia/{asistenciaId}")
-    public ResponseEntity<List<HistorialEstadoAsistencia>>
+    public ResponseEntity<List<HistorialEstadoAsistenciaResponse>>
     listarPorAsistencia(
             @PathVariable Long asistenciaId) {
 
@@ -43,32 +47,4 @@ public class HistorialEstadoAsistenciaController {
                         .listarPorAsistencia(asistenciaId)
         );
     }
-
-    @PostMapping
-    public ResponseEntity<HistorialEstadoAsistencia> guardar(
-            @RequestBody HistorialEstadoAsistencia historial) {
-
-        return ResponseEntity.ok(
-                historialEstadoAsistenciaService
-                        .guardar(historial)
-        );
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(
-            @PathVariable Long id) {
-
-        return historialEstadoAsistenciaService
-                .buscarPorId(id)
-                .map(historial -> {
-
-                    historialEstadoAsistenciaService
-                            .eliminar(id);
-
-                    return ResponseEntity.noContent()
-                            .<Void>build();
-                })
-                .orElse(ResponseEntity.notFound().build());
-    }
-
 }

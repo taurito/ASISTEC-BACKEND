@@ -1,9 +1,12 @@
 package tec.asistencias.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import tec.asistencias.entity.ActividadAsistencia;
+import tec.asistencias.dto.ActividadAsistenciaRequest;
+import tec.asistencias.dto.ActividadAsistenciaResponse;
 import tec.asistencias.service.ActividadAsistenciaService;
 
 import java.util.List;
@@ -13,56 +16,75 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ActividadAsistenciaController {
 
-    private final ActividadAsistenciaService actividadAsistenciaService;
+    private final ActividadAsistenciaService
+            actividadAsistenciaService;
 
+    // LISTAR TODAS
     @GetMapping
-    public ResponseEntity<List<ActividadAsistencia>> listarTodos(){
-        return ResponseEntity.ok(actividadAsistenciaService.listarTodos());
+    public ResponseEntity<List<ActividadAsistenciaResponse>>
+    listar() {
+
+        return ResponseEntity.ok(
+                actividadAsistenciaService.listarTodas()
+        );
     }
 
+    // BUSCAR POR ID
     @GetMapping("/{id}")
-    public ResponseEntity<ActividadAsistencia> buscarPorId(@PathVariable Long id){
+    public ResponseEntity<ActividadAsistenciaResponse>
+    buscarPorId(@PathVariable Long id) {
 
-        return actividadAsistenciaService.buscarPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(
+                actividadAsistenciaService.buscarPorId(id)
+        );
     }
 
+    // LISTAR POR ASISTENCIA
     @GetMapping("/asistencia/{asistenciaId}")
-    public ResponseEntity<List<ActividadAsistencia>> listarPorAsistencia(@PathVariable Long asistenciaId){
+    public ResponseEntity<List<ActividadAsistenciaResponse>>
+    listarPorAsistencia(
+            @PathVariable Long asistenciaId) {
 
-        return ResponseEntity.ok(actividadAsistenciaService.listarPorAsistencia(asistenciaId));
+        return ResponseEntity.ok(
+                actividadAsistenciaService
+                        .listarPorAsistencia(asistenciaId)
+        );
     }
 
+    // CREAR
     @PostMapping
-    public ResponseEntity<ActividadAsistencia> guardar(@RequestBody ActividadAsistencia actividad){
-        return ResponseEntity.ok(actividadAsistenciaService.guardar(actividad));
+    public ResponseEntity<ActividadAsistenciaResponse> crear(
+            @Valid @RequestBody ActividadAsistenciaRequest request) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        actividadAsistenciaService
+                                .guardar(request)
+                );
     }
 
+    // ACTUALIZAR
     @PutMapping("/{id}")
-    public ResponseEntity<ActividadAsistencia> actualizar(@PathVariable Long id, @RequestBody ActividadAsistencia actividad){
+    public ResponseEntity<ActividadAsistenciaResponse> actualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody ActividadAsistenciaRequest request) {
 
-        return actividadAsistenciaService.buscarPorId(id)
-                .map(existente ->{
-                    existente.setAsistencia(actividad.getAsistencia());
-                    existente.setDescripcion(actividad.getDescripcion());
-                    existente.setResultado(actividad.getResultado());
-                    existente.setFechaActividad(actividad.getFechaActividad());
-                    existente.setObservacion(actividad.getObservacion());
-
-                    return ResponseEntity.ok(actividadAsistenciaService.guardar(existente));
-                })
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(
+                actividadAsistenciaService.actualizar(
+                        id,
+                        request
+                )
+        );
     }
 
-    public ResponseEntity<Void> eliminar(@PathVariable Long id){
+    // ELIMINAR
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(
+            @PathVariable Long id) {
 
-        return actividadAsistenciaService.buscarPorId(id)
-                .map(actividad ->{
-                    actividadAsistenciaService.eliminar(id);
+        actividadAsistenciaService.eliminar(id);
 
-                    return ResponseEntity.noContent().<Void>build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.noContent().build();
     }
 }
