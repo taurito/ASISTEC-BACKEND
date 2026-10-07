@@ -7,6 +7,7 @@ import tec.asistencias.dto.ActividadAsistenciaRequest;
 import tec.asistencias.dto.ActividadAsistenciaResponse;
 import tec.asistencias.entity.ActividadAsistencia;
 import tec.asistencias.entity.Asistencia;
+import tec.asistencias.exception.BusinessException;
 import tec.asistencias.exception.ResourceNotFoundException;
 import tec.asistencias.repository.ActividadAsistenciaRepository;
 import tec.asistencias.repository.AsistenciaRepository;
@@ -73,6 +74,12 @@ public class ActividadAsistenciaService {
                                 )
                         );
 
+        if (asistencia.getFechaCierre() != null) {
+            throw new BusinessException(
+                    "No se pueden registrar actividades en una asistencia cerrada."
+            );
+        }
+
         ActividadAsistencia actividad =
                 ActividadAsistencia.builder()
                         .asistencia(asistencia)
@@ -112,6 +119,12 @@ public class ActividadAsistenciaService {
                                                 + request.getAsistenciaId()
                                 )
                         );
+        if (asistencia.getFechaCierre() != null) {
+            throw new BusinessException(
+                    "No se pueden registrar actividades en una asistencia cerrada."
+            );
+        }
+
 
         actividad.setAsistencia(asistencia);
         actividad.setDescripcion(

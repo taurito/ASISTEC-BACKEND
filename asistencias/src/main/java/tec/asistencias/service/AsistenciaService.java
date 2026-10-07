@@ -10,6 +10,7 @@ import tec.asistencias.entity.*;
 import tec.asistencias.repository.*;
 import tec.asistencias.exception.BusinessException;
 import tec.asistencias.exception.ResourceNotFoundException;
+import tec.asistencias.dto.AsistenciaUpdateRequest;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -178,7 +179,7 @@ public class AsistenciaService {
     @Transactional
     public AsistenciaResponse actualizar(
             Long id,
-            AsistenciaRequest request) {
+            AsistenciaUpdateRequest request) {
 
         Asistencia asistencia = asistenciaRepository.findById(id)
                 .orElseThrow(() ->
@@ -187,23 +188,11 @@ public class AsistenciaService {
                         )
                 );
 
-        Activo activo = activoRepository.findById(request.getActivoId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "No existe el activo con ID: "
-                                        + request.getActivoId()
-                        )
-                );
-
-        Empleado empleado = empleadoRepository.findById(
-                        request.getEmpleadoId()
-                )
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "No existe el empleado con ID: "
-                                        + request.getEmpleadoId()
-                        )
-                );
+        if (asistencia.getFechaCierre() != null) {
+            throw new BusinessException(
+                    "No se puede modificar una asistencia que ya fue entregada."
+            );
+        }
 
         Empleado tecnico = empleadoRepository.findById(
                         request.getTecnicoId()
@@ -226,11 +215,6 @@ public class AsistenciaService {
                                 )
                         );
 
-        asistencia.setNumeroAsistencia(
-                request.getNumeroAsistencia()
-        );
-        asistencia.setActivo(activo);
-        asistencia.setEmpleado(empleado);
         asistencia.setTecnico(tecnico);
         asistencia.setTipoAsistencia(tipoAsistencia);
         asistencia.setProblemaReportado(
@@ -266,6 +250,12 @@ public class AsistenciaService {
                                                 + asistenciaId
                                 )
                         );
+
+        if (asistencia.getFechaCierre() != null) {
+            throw new BusinessException(
+                    "La asistencia ya fue cerrada y no puede cambiar de estado."
+            );
+        }
 
         EstadoAsistencia nuevoEstado =
                 estadoAsistenciaRepository.findById(
@@ -378,7 +368,7 @@ public class AsistenciaService {
     }
 
     // ELIMINAR
-    public void eliminar(Long id) {
+    /*public void eliminar(Long id) {
 
         if (!asistenciaRepository.existsById(id)) {
             throw new ResourceNotFoundException(
@@ -387,7 +377,7 @@ public class AsistenciaService {
         }
 
         asistenciaRepository.deleteById(id);
-    }
+    }*/
 
     // CONVERTIR ENTITY → RESPONSE
     private AsistenciaResponse convertirAResponse(

@@ -1,10 +1,13 @@
 package tec.asistencias.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import tec.asistencias.entity.AsignacionActivo;
-import tec.asistencias.service.AsignacionActivoservice;
+import tec.asistencias.dto.AsignacionActivoRequest;
+import tec.asistencias.dto.AsignacionActivoResponse;
+import tec.asistencias.service.AsignacionActivoService;
 
 import java.util.List;
 
@@ -13,63 +16,74 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AsignacionActivoController {
 
-    private final AsignacionActivoservice asignacionActivoService;
+    private final AsignacionActivoService
+            asignacionActivoService;
 
+    // LISTAR TODAS
     @GetMapping
-    public ResponseEntity<List<AsignacionActivo>> listarTodas(){
-        return ResponseEntity.ok(asignacionActivoService.listarTodas());
+    public ResponseEntity<List<AsignacionActivoResponse>>
+    listar() {
+
+        return ResponseEntity.ok(
+                asignacionActivoService.listarTodas()
+        );
     }
 
+    // BUSCAR POR ID
     @GetMapping("/{id}")
-    public ResponseEntity<AsignacionActivo> buscarPorId(@PathVariable Long id){
-        return asignacionActivoService.buscarPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<AsignacionActivoResponse>
+    buscarPorId(@PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                asignacionActivoService.buscarPorId(id)
+        );
     }
 
+    // ASIGNACION VIGENTE
     @GetMapping("/activo/{activoId}/actual")
-    public ResponseEntity<AsignacionActivo> buscarAsignacionActual(@PathVariable Long activoId){
+    public ResponseEntity<AsignacionActivoResponse>
+    buscarAsignacionActual(
+            @PathVariable Long activoId) {
+
         return asignacionActivoService
                 .buscarAsignacionActual(activoId)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElseGet(() ->
+                        ResponseEntity.notFound().build()
+                );
     }
 
+    // HISTORIAL
     @GetMapping("/activo/{activoId}/historial")
-    public ResponseEntity<List<AsignacionActivo>> listaHistorial(@PathVariable Long activoId){
-        return ResponseEntity.ok(asignacionActivoService.listarHistorialPorActivo(activoId));
+    public ResponseEntity<List<AsignacionActivoResponse>>
+    listarHistorialPorActivo(
+            @PathVariable Long activoId) {
+
+        return ResponseEntity.ok(
+                asignacionActivoService
+                        .listarHistorialPorActivo(activoId)
+        );
     }
 
+    // NUEVA ASIGNACION
     @PostMapping
-    public ResponseEntity<AsignacionActivo> guardar(@RequestBody AsignacionActivo asignacion){
-        return ResponseEntity.ok(asignacionActivoService.guardar(asignacion));
+    public ResponseEntity<AsignacionActivoResponse> asignar(
+            @Valid @RequestBody AsignacionActivoRequest request) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        asignacionActivoService.asignar(request)
+                );
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<AsignacionActivo> actualizar(@PathVariable Long id, @RequestBody AsignacionActivo asignacion){
-        return asignacionActivoService.buscarPorId(id)
-                .map(existente ->{
-                    existente.setActivo(asignacion.getActivo());
-                    existente.setEmpleado(asignacion.getEmpleado());
-                    existente.setFechaAsignacion(asignacion.getFechaAsignacion());
-                    existente.setFechaDevolucion(asignacion.getFechaDevolucion());
-                    existente.setObservacion(asignacion.getObservacion());
-                    existente.setVigente(asignacion.getVigente());
+    // DEVOLVER / CERRAR ASIGNACION
+    @PatchMapping("/{id}/devolver")
+    public ResponseEntity<AsignacionActivoResponse> devolver(
+            @PathVariable Long id) {
 
-                    return ResponseEntity.ok(asignacionActivoService.guardar(existente));
-                })
-                .orElse(ResponseEntity.notFound().build());
-
+        return ResponseEntity.ok(
+                asignacionActivoService.devolver(id)
+        );
     }
-
-    public ResponseEntity<Void> eliminar(@PathVariable Long id){
-        return asignacionActivoService.buscarPorId(id)
-                .map(asignacion ->{
-                    asignacionActivoService.eliminar(id);
-
-                    return ResponseEntity.noContent().<Void>build();
-                })
-                .orElse(ResponseEntity.notFound().build());
-    }
-
 }

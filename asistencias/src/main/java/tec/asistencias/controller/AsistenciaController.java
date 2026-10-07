@@ -10,6 +10,7 @@ import tec.asistencias.dto.AsistenciaResponse;
 import tec.asistencias.dto.CambioEstadoAsistenciaRequest;
 import tec.asistencias.exception.ResourceNotFoundException;
 import tec.asistencias.service.AsistenciaService;
+import tec.asistencias.dto.AsistenciaUpdateRequest;
 
 import java.util.List;
 
@@ -104,7 +105,7 @@ public class AsistenciaController {
     @PutMapping("/{id}")
     public ResponseEntity<AsistenciaResponse> actualizar(
             @PathVariable Long id,
-            @Valid @RequestBody AsistenciaRequest request) {
+            @Valid @RequestBody AsistenciaUpdateRequest request) {
 
         return ResponseEntity.ok(
                 asistenciaService.actualizar(
@@ -128,13 +129,4 @@ public class AsistenciaController {
         );
     }
 
-    // ELIMINAR
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(
-            @PathVariable Long id) {
-
-        asistenciaService.eliminar(id);
-
-        return ResponseEntity.noContent().build();
-    }
 }
