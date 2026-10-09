@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.security.core.AuthenticationException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -94,6 +95,20 @@ public class GlobalExceptionHandler {
                         "status", 500,
                         "error", "Internal Server Error",
                         "message", "Ocurrió un error interno en el servidor."
+                ));
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<?> manejarAutenticacion(
+            AuthenticationException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", 401,
+                        "error", "Unauthorized",
+                        "message", "Usuario o contraseña incorrectos."
                 ));
     }
 }
