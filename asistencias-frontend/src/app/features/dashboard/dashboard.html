@@ -1,0 +1,97 @@
+<main class="dashboard-page">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">AS</div>
+      <div>
+        <strong>Asistencias</strong>
+        <span>Unidad de Informática</span>
+      </div>
+    </div>
+
+    <button type="button" class="logout-button" (click)="cerrarSesion()">
+      Cerrar sesión
+    </button>
+  </header>
+
+  <section class="dashboard-content">
+    <p class="eyebrow">PANEL PRINCIPAL</p>
+
+    <h1>Bienvenido, {{ nombreUsuario }}</h1>
+
+    <p class="welcome-text">
+      Has iniciado sesión correctamente en el Sistema de Asistencias Técnicas.
+    </p>
+
+    <div class="profile-card">
+      <div class="avatar">
+        {{ nombreUsuario.charAt(0).toUpperCase() }}
+      </div>
+
+      <div class="profile-info">
+        <span class="profile-label">Sesión activa</span>
+        <strong>{{ nombreUsuario }}</strong>
+        <span class="role">{{ rolPrincipal }}</span>
+      </div>
+    </div>
+
+    <h2>Gestión del sistema</h2>
+
+    <div class="module-grid" >
+
+      @if (puedeConsultarEmpleados) {
+      <article class="module-card" routerLink="/empleados"> 
+        <span class="module-number">01</span>
+        <h3>Funcionarios</h3>
+        <p>
+          Consulta el directorio del personal y sus unidades institucionales.
+        </p>
+
+        <a routerLink="/empleados" class="module-link">
+          Abrir módulo →
+        </a>
+      </article>
+      }
+
+      <article class="module-card" routerLink="/activos">
+        <span class="module-number">02</span>
+        <h3>Activos tecnológicos</h3>
+        <p>Consulta y administra el inventario de equipos.</p>
+        <a routerLink="/activos" class="module-link">Abrir módulo →</a>
+      </article>
+
+      <article class="module-card" routerLink="/asistencias">
+        <span class="module-number">03</span>
+        <h3>Asistencias técnicas</h3>
+        <p>
+          Registra ingresos, controla las reparaciones y consulta
+          las actividades e historiales de cada equipo.
+        </p>
+
+        <a routerLink="/asistencias" class="module-link">
+          Abrir módulo →
+        </a>
+     </article>
+
+     <article class="module-card" routerLink="/asignaciones">
+        <span class="module-number">04</span>
+        <h3>Asignaciones de activos</h3>
+        <p>
+          Consulta responsables, entregas y devoluciones de los equipos.
+        </p>
+
+        <a routerLink="/asignaciones" class="module-link">
+          Abrir módulo →
+        </a>
+      </article>
+
+      <article class="module-card">
+        <span class="module-number">05</span>
+        <h3>Historial y actividades</h3>
+        <p>Consulta los trabajos realizados sobre cada equipo.</p>
+        <span class="module-status">Próximamente</span>
+      </article>
+
+      
+    </div>
+  </section>
+</main>

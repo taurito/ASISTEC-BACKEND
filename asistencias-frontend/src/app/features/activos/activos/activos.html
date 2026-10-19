@@ -1,0 +1,258 @@
+<main class="page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">INVENTARIO TECNOLÓGICO</p>
+      <h1>Activos</h1>
+      <p class="subtitle">
+        Consulta y administra los equipos tecnológicos de la institución.
+      </p>
+    </div>
+
+    @if (esAdmin) {
+      <button class="primary-button" (click)="abrirCrear()">
+        + Registrar activo
+      </button>
+    }
+  </header>
+
+  @if (mensaje) {
+    <div class="alert success" role="status">
+      {{ mensaje }}
+    </div>
+  }
+
+  @if (error) {
+    <div class="alert error" role="alert">
+      {{ error }}
+    </div>
+  }
+
+  @if (mostrarFormulario) {
+    <section class="form-card">
+      <div class="form-header">
+        <div>
+          <h2>{{ editando ? 'Editar activo' : 'Registrar activo' }}</h2>
+          <p>Completa la información del equipo tecnológico.</p>
+        </div>
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="cancelarFormulario()"
+        >
+          Cancelar
+        </button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="guardar()">
+        <div class="form-grid">
+          <div class="field">
+            <label for="nombre">Nombre del activo *</label>
+            <input id="nombre" formControlName="nombre"
+                   placeholder="CPU Oficina 01" />
+
+            @if (form.controls.nombre.touched &&
+                 form.controls.nombre.hasError('required')) {
+              <small>El nombre es obligatorio.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="codigoActivo">Código de activo *</label>
+            <input id="codigoActivo" formControlName="codigoActivo"
+                   placeholder="ACT-0001" />
+
+            @if (form.controls.codigoActivo.touched &&
+                 form.controls.codigoActivo.hasError('required')) {
+              <small>El código es obligatorio.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="tipoActivoId">Tipo de activo *</label>
+            <select id="tipoActivoId" formControlName="tipoActivoId">
+              <option [ngValue]="null">Selecciona un tipo</option>
+
+              @for (tipo of tipos; track tipo.id) {
+                <option [ngValue]="tipo.id">{{ tipo.nombre }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="marcaId">Marca *</label>
+            <select id="marcaId" formControlName="marcaId">
+              <option [ngValue]="null">Selecciona una marca</option>
+
+              @for (marca of marcas; track marca.id) {
+                <option [ngValue]="marca.id">{{ marca.nombre }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="modelo">Modelo</label>
+            <input id="modelo" formControlName="modelo"
+                   placeholder="OptiPlex 7090" />
+          </div>
+
+          <div class="field">
+            <label for="serie">Número de serie</label>
+            <input id="serie" formControlName="serie"
+                   placeholder="Número de serie del fabricante" />
+          </div>
+
+          <div class="field">
+            <label for="estadoActivoId">Estado del equipo *</label>
+            <select id="estadoActivoId"
+                    formControlName="estadoActivoId">
+              <option [ngValue]="null">Selecciona un estado</option>
+
+              @for (estado of estados; track estado.id) {
+                <option [ngValue]="estado.id">
+                  {{ estado.nombre }}
+                </option>
+              }
+            </select>
+
+            @if (editando) {
+              <small>
+                El estado operativo se gestiona mediante el proceso
+                de asistencia técnica.
+              </small>
+            } @else {
+              <small>
+                Los nuevos equipos se registran inicialmente como ACTIVO.
+              </small>
+            }
+          </div>
+
+          <div class="field checkbox-field">
+            <label for="activo">Registro habilitado</label>
+            <div class="checkbox-control">
+              <input
+                id="activo"
+                type="checkbox"
+                formControlName="activo"
+              />
+              <span>El activo está habilitado en el inventario</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="cancelarFormulario()"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="guardando"
+          >
+            @if (guardando) {
+              Guardando...
+            } @else {
+              {{ editando ? 'Guardar cambios' : 'Registrar activo' }}
+            }
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <section class="table-card">
+    <div class="table-header">
+      <div>
+        <h2>Inventario de equipos</h2>
+        <p>{{ activosFiltrados.length }} equipos encontrados</p>
+      </div>
+
+      <input
+        class="search-input"
+        type="search"
+        placeholder="Buscar por nombre, código, serie..."
+        [value]="filtro"
+        (input)="cambiarFiltro($event)"
+        aria-label="Buscar activos"
+      />
+    </div>
+
+    @if (cargando) {
+      <div class="empty-state">
+        Cargando activos...
+      </div>
+    } @else if (activosFiltrados.length === 0) {
+      <div class="empty-state">
+        <strong>No se encontraron activos.</strong>
+        <p>Prueba con otro término de búsqueda.</p>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Equipo</th>
+              <th>Marca / Modelo</th>
+              <th>Serie</th>
+              <th>Estado</th>
+              @if (esAdmin) {
+                <th>Acciones</th>
+              }
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (activo of activosFiltrados; track activo.id) {
+              <tr>
+                <td>
+                  <span class="asset-code">
+                    {{ activo.codigoActivo }}
+                  </span>
+                </td>
+
+                <td>
+                  <div class="asset-name">{{ activo.nombre }}</div>
+                  <div class="asset-type">{{ activo.tipoActivoNombre }}</div>
+                </td>
+
+                <td>
+                  <div>{{ activo.marcaNombre }}</div>
+                  <div class="muted">{{ activo.modelo || 'Sin modelo' }}</div>
+                </td>
+
+                <td>{{ activo.serie || '—' }}</td>
+
+                <td>
+                  <span class="status-chip">
+                    {{ activo.estadoActivoNombre }}
+                  </span>
+
+                  @if (!activo.activo) {
+                    <div class="muted">Registro deshabilitado</div>
+                  }
+                </td>
+
+                @if (esAdmin) {
+                  <td>
+                    <button
+                      class="text-button"
+                      (click)="editar(activo)"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</main>

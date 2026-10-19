@@ -1,0 +1,289 @@
+<main class="page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">GESTIÓN INSTITUCIONAL</p>
+      <h1>Funcionarios</h1>
+      <p class="subtitle">
+        Administra la información del personal y su unidad asignada.
+      </p>
+    </div>
+
+    @if (esAdmin) {
+      <button class="primary-button" (click)="abrirCrear()">
+        + Registrar funcionario
+      </button>
+    }
+  </header>
+
+  @if (mensaje) {
+    <div class="alert success" role="status">
+      {{ mensaje }}
+    </div>
+  }
+
+  @if (error) {
+    <div class="alert error" role="alert">
+      {{ error }}
+    </div>
+  }
+
+  @if (mostrarFormulario) {
+    <section class="form-card">
+      <div class="form-header">
+        <div>
+          <h2>
+            {{ editando ? 'Editar empleado' : 'Registrar funcionario' }}
+          </h2>
+          <p>Completa los datos del funcionario.</p>
+        </div>
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="cancelarFormulario()"
+        >
+          Cancelar
+        </button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="guardar()">
+        <div class="form-grid">
+          <div class="field">
+            <label for="codigoEmpleado">Código de empleado *</label>
+            <input
+              id="codigoEmpleado"
+              formControlName="codigoEmpleado"
+              placeholder="EMP-001"
+            />
+
+            @if (
+              form.controls.codigoEmpleado.touched &&
+              form.controls.codigoEmpleado.hasError('required')
+            ) {
+              <small>El código es obligatorio.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="documento">Documento de identidad *</label>
+            <input
+              id="documento"
+              formControlName="documento"
+              placeholder="Número de documento"
+            />
+
+            @if (
+              form.controls.documento.touched &&
+              form.controls.documento.hasError('required')
+            ) {
+              <small>El documento es obligatorio.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="nombres">Nombres *</label>
+            <input
+              id="nombres"
+              formControlName="nombres"
+              placeholder="Nombres del funcionario"
+            />
+
+            @if (
+              form.controls.nombres.touched &&
+              form.controls.nombres.hasError('required')
+            ) {
+              <small>Los nombres son obligatorios.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="apellidos">Apellidos *</label>
+            <input
+              id="apellidos"
+              formControlName="apellidos"
+              placeholder="Apellidos del funcionario"
+            />
+
+            @if (
+              form.controls.apellidos.touched &&
+              form.controls.apellidos.hasError('required')
+            ) {
+              <small>Los apellidos son obligatorios.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="cargo">Cargo</label>
+            <input
+              id="cargo"
+              formControlName="cargo"
+              placeholder="Cargo institucional"
+            />
+          </div>
+
+          <div class="field">
+            <label for="telefono">Teléfono</label>
+            <input
+              id="telefono"
+              formControlName="telefono"
+              placeholder="Teléfono de contacto"
+            />
+          </div>
+
+          <div class="field">
+            <label for="correo">Correo electrónico</label>
+            <input
+              id="correo"
+              type="email"
+              formControlName="correo"
+              placeholder="nombre@institucion.gob.bo"
+            />
+
+            @if (
+              form.controls.correo.touched &&
+              form.controls.correo.hasError('email')
+            ) {
+              <small>El correo no tiene un formato válido.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="unidadId">Unidad institucional *</label>
+            <select id="unidadId" formControlName="unidadId">
+              <option [ngValue]="null">Selecciona una unidad</option>
+
+              @for (unidad of unidades; track unidad.id) {
+                <option [ngValue]="unidad.id">
+                  {{ unidad.nombre }}
+                </option>
+              }
+            </select>
+
+            @if (
+              form.controls.unidadId.touched &&
+              form.controls.unidadId.hasError('required')
+            ) {
+              <small>Debes seleccionar una unidad.</small>
+            }
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="cancelarFormulario()"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="guardando"
+          >
+            @if (guardando) {
+              Guardando...
+            } @else {
+              {{ editando ? 'Guardar cambios' : 'Registrar funcionario' }}
+            }
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <section class="table-card">
+    <div class="table-header">
+      <div>
+        <h2>Directorio de empleados</h2>
+        <p>{{ empleadosFiltrados.length }} registros encontrados</p>
+      </div>
+
+      <input
+        class="search-input"
+        type="search"
+        placeholder="Buscar por nombre, documento, unidad..."
+        [value]="filtro"
+        (input)="cambiarFiltro($event)"
+        aria-label="Buscar funcionarios"
+      />
+    </div>
+
+    @if (cargando) {
+      <div class="empty-state">Cargando empleados...</div>
+    } @else if (empleadosFiltrados.length === 0) {
+      <div class="empty-state">
+        <strong>No se encontraron funcionarios.</strong>
+        <p>Prueba con otro criterio de búsqueda.</p>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Empleado</th>
+              <th>Documento</th>
+              <th>Cargo</th>
+              <th>Unidad</th>
+              <th>Contacto</th>
+              <th>Estado</th>
+
+              @if (esAdmin) {
+                <th>Acciones</th>
+              }
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (empleado of empleadosFiltrados; track empleado.id) {
+              <tr>
+                <td>
+                  <span class="employee-code">
+                    {{ empleado.codigoEmpleado }}
+                  </span>
+                </td>
+
+                <td>
+                  <div class="employee-name">
+                    {{ empleado.nombres }} {{ empleado.apellidos }}
+                  </div>
+                </td>
+
+                <td>{{ empleado.documento }}</td>
+                <td>{{ empleado.cargo || '—' }}</td>
+                <td>{{ empleado.unidadNombre }}</td>
+
+                <td>
+                  <div>{{ empleado.telefono || '—' }}</div>
+                  <div class="muted">{{ empleado.correo || '' }}</div>
+                </td>
+
+                <td>
+                  <span
+                    class="status-chip"
+                    [class.inactive]="!empleado.activo"
+                  >
+                    {{ empleado.activo ? 'ACTIVO' : 'INACTIVO' }}
+                  </span>
+                </td>
+
+                @if (esAdmin) {
+                  <td>
+                    <button
+                      class="text-button"
+                      (click)="editar(empleado)"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</main>

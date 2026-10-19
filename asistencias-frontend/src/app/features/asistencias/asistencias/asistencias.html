@@ -1,0 +1,717 @@
+
+<main class="page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">UNIDAD DE INFORMÁTICA</p>
+      <h1>Asistencias técnicas</h1>
+      <p class="subtitle">
+        Gestiona reparaciones, seguimiento de estados y trabajos
+        realizados sobre cada equipo.
+      </p>
+    </div>
+
+    @if (esAdmin) {
+      <button class="primary-button" (click)="abrirCrear()">
+        + Nueva asistencia
+      </button>
+    }
+  </header>
+
+  @if (mensaje) {
+    <div class="alert success" role="status">
+      {{ mensaje }}
+    </div>
+  }
+
+  @if (error) {
+    <div class="alert error" role="alert">
+      {{ error }}
+    </div>
+  }
+
+  @if (mostrarCrear && esAdmin) {
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Registrar ingreso de equipo</h2>
+          <p>
+            El sistema asignará automáticamente el estado RECIBIDO
+            y registrará el movimiento inicial.
+          </p>
+        </div>
+
+        <button
+          class="secondary-button"
+          type="button"
+          (click)="cancelarCrear()"
+        >
+          Cancelar
+        </button>
+      </div>
+
+      <form [formGroup]="crearForm" (ngSubmit)="crearAsistencia()">
+        <div class="form-grid">
+          <div class="field">
+            <label for="numeroAsistencia">
+              Número de asistencia *
+            </label>
+
+            <input
+              id="numeroAsistencia"
+              formControlName="numeroAsistencia"
+              placeholder="AS-0001"
+            />
+
+            @if (
+              crearForm.controls.numeroAsistencia.touched &&
+              crearForm.controls.numeroAsistencia.hasError('required')
+            ) {
+              <small>El número de asistencia es obligatorio.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="tipoAsistenciaId">Tipo de asistencia *</label>
+
+            <select
+              id="tipoAsistenciaId"
+              formControlName="tipoAsistenciaId"
+            >
+              <option [ngValue]="null">Selecciona un tipo</option>
+
+              @for (tipo of tipos; track tipo.id) {
+                <option [ngValue]="tipo.id">{{ tipo.nombre }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="activoId">Equipo tecnológico *</label>
+
+            <select id="activoId" formControlName="activoId">
+              <option [ngValue]="null">Selecciona un equipo</option>
+
+              @for (activo of activosDisponibles; track activo.id) {
+                <option [ngValue]="activo.id">
+                  {{ activo.nombre }} - {{ activo.codigoActivo }} 
+                </option>
+              }
+            </select>
+
+            @if (activosDisponibles.length === 0) {
+              <small>No hay equipos disponibles para recibir.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="empleadoId">Funcionario solicitante *</label>
+
+            <select id="empleadoId" formControlName="empleadoId">
+              <option [ngValue]="null">Selecciona un empleado</option>
+
+              @for (
+                empleado of empleadosDisponibles;
+                track empleado.id
+              ) {
+                <option [ngValue]="empleado.id">
+                  {{ empleado.nombres }} {{ empleado.apellidos }}
+                </option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="tecnicoId">Técnico responsable *</label>
+
+            <select id="tecnicoId" formControlName="tecnicoId">
+              <option [ngValue]="null">Selecciona un técnico</option>
+
+              @for (
+                empleado of empleadosDisponibles;
+                track empleado.id
+              ) {
+                <option [ngValue]="empleado.id">
+                  {{ empleado.nombres }} {{ empleado.apellidos }}
+                </option>
+              }
+            </select>
+          </div>
+
+          <div class="field full-width">
+            <label for="problemaReportado">Problema reportado</label>
+
+            <textarea
+              id="problemaReportado"
+              formControlName="problemaReportado"
+              rows="3"
+              placeholder="Describe el problema informado por el empleado"
+            ></textarea>
+          </div>
+
+          <div class="field full-width">
+            <label for="observacionesCrear">Observaciones iniciales</label>
+
+            <textarea
+              id="observacionesCrear"
+              formControlName="observaciones"
+              rows="2"
+              placeholder="Accesorios recibidos, condiciones del equipo..."
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="cancelarCrear()"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="guardando"
+          >
+            @if (guardando) {
+              Registrando...
+            } @else {
+              Registrar asistencia
+            }
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <section class="list-card">
+    <div class="list-heading">
+      <div>
+        <h2>Registro de asistencias</h2>
+        <p>{{ asistenciasFiltradas.length }} registros encontrados</p>
+      </div>
+
+      <input
+        class="search-input"
+        type="search"
+        [value]="filtro"
+        (input)="cambiarFiltro($event)"
+        placeholder="Buscar número, equipo, empleado o estado..."
+        aria-label="Buscar asistencias"
+      />
+    </div>
+
+    @if (cargando) {
+      <div class="empty-state">Cargando asistencias...</div>
+    } @else if (asistenciasFiltradas.length === 0) {
+      <div class="empty-state">
+        <strong>No se encontraron asistencias.</strong>
+        <p>Prueba con otro criterio de búsqueda.</p>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>N.º asistencia</th>
+              <th>Equipo</th>
+              <th>Empleado</th>
+              <th>Técnico</th>
+              <th>Ingreso</th>
+              <th>Estado</th>
+              <th>Detalle</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (
+              asistencia of asistenciasFiltradas;
+              track asistencia.id
+            ) {
+              <tr
+                [class.selected-row]="seleccionada?.id === asistencia.id"
+              >
+                <td>
+                  <strong class="reference">
+                    {{ asistencia.numeroAsistencia }}
+                  </strong>
+                </td>
+
+                <td>
+                  <div class="primary-text">
+                    {{ asistencia.codigoActivo }}
+                  </div>
+                  <div class="muted">{{ asistencia.activoNombre }}</div>
+                </td>
+
+                <td>{{ asistencia.empleadoNombre }}</td>
+
+                <td>{{ asistencia.tecnicoNombre }}</td>
+
+                <td>
+                  {{ asistencia.fechaIngreso | date:'dd/MM/yyyy HH:mm' }}
+                </td>
+
+                <td>
+                  <span class="status-chip">
+                    {{ asistencia.estadoAsistenciaNombre }}
+                  </span>
+                </td>
+
+                <td>
+                  <button
+                    type="button"
+                    class="text-button"
+                    (click)="verDetalle(asistencia)"
+                  >
+                    Ver detalle
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  @if (seleccionada; as asistencia) {
+    <section class="detail-section">
+      <div class="detail-header">
+        <div>
+          <p class="eyebrow">DETALLE DE ASISTENCIA</p>
+
+          <h2>{{ asistencia.numeroAsistencia }}</h2>
+
+          <p class="subtitle">
+            {{ asistencia.codigoActivo }} · {{ asistencia.activoNombre }}
+          </p>
+        </div>
+
+        <span class="status-chip large">
+          {{ asistencia.estadoAsistenciaNombre }}
+        </span>
+      </div>
+
+      <div class="detail-grid">
+        <article class="info-card">
+          <span>Empleado solicitante</span>
+          <strong>{{ asistencia.empleadoNombre }}</strong>
+        </article>
+
+        <article class="info-card">
+          <span>Técnico responsable</span>
+          <strong>{{ asistencia.tecnicoNombre }}</strong>
+        </article>
+
+        <article class="info-card">
+          <span>Tipo de asistencia</span>
+          <strong>{{ asistencia.tipoAsistenciaNombre }}</strong>
+        </article>
+
+        <article class="info-card">
+          <span>Fecha de ingreso</span>
+          <strong>
+            {{ asistencia.fechaIngreso | date:'dd/MM/yyyy HH:mm' }}
+          </strong>
+        </article>
+
+        <article class="info-card">
+          <span>Fecha de cierre</span>
+          <strong>
+            @if (asistencia.fechaCierre) {
+              {{ asistencia.fechaCierre | date:'dd/MM/yyyy HH:mm' }}
+            } @else {
+              Pendiente
+            }
+          </strong>
+        </article>
+      </div>
+
+      <div class="detail-columns">
+        <article class="content-card">
+          <h3>Problema reportado</h3>
+          <p>
+            {{ asistencia.problemaReportado || 'Sin información registrada.' }}
+          </p>
+        </article>
+
+        <article class="content-card">
+          <h3>Diagnóstico</h3>
+          <p>
+            {{ asistencia.diagnostico || 'Pendiente de diagnóstico.' }}
+          </p>
+        </article>
+
+        <article class="content-card">
+          <h3>Trabajo realizado</h3>
+          <p>
+            {{ asistencia.trabajoRealizado || 'Sin trabajo registrado.' }}
+          </p>
+        </article>
+
+        <article class="content-card">
+          <h3>Observaciones</h3>
+          <p>
+            {{ asistencia.observaciones || 'Sin observaciones.' }}
+          </p>
+        </article>
+      </div>
+
+      @if (puedeEditarAsistencia && !mostrarEditar) {
+        <div class="detail-actions">
+          <button
+            class="secondary-button"
+            (click)="abrirEditar()"
+          >
+            Editar información
+          </button>
+        </div>
+      }
+
+      @if (mostrarEditar && puedeEditarAsistencia) {
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <h3>Actualizar asistencia</h3>
+              <p>
+                El activo, el empleado solicitante y el número de asistencia
+                no se pueden cambiar.
+              </p>
+            </div>
+          </div>
+
+          <form [formGroup]="editarForm" (ngSubmit)="guardarEdicion()">
+            <div class="form-grid">
+              <div class="field">
+                <label for="tecnicoEditar">Técnico responsable *</label>
+
+                <select
+                  id="tecnicoEditar"
+                  formControlName="tecnicoId"
+                >
+                  <option [ngValue]="null">Selecciona un técnico</option>
+
+                  @for (
+                    empleado of empleadosDisponibles;
+                    track empleado.id
+                  ) {
+                    <option [ngValue]="empleado.id">
+                      {{ empleado.nombres }} {{ empleado.apellidos }}
+                    </option>
+                  }
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="tipoEditar">Tipo de asistencia *</label>
+
+                <select
+                  id="tipoEditar"
+                  formControlName="tipoAsistenciaId"
+                >
+                  <option [ngValue]="null">Selecciona un tipo</option>
+
+                  @for (tipo of tipos; track tipo.id) {
+                    <option [ngValue]="tipo.id">{{ tipo.nombre }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="field full-width">
+                <label for="problemaEditar">Problema reportado</label>
+                <textarea
+                  id="problemaEditar"
+                  formControlName="problemaReportado"
+                  rows="3"
+                ></textarea>
+              </div>
+
+              <div class="field full-width">
+                <label for="diagnosticoEditar">Diagnóstico</label>
+                <textarea
+                  id="diagnosticoEditar"
+                  formControlName="diagnostico"
+                  rows="3"
+                ></textarea>
+              </div>
+
+              <div class="field full-width">
+                <label for="trabajoEditar">Trabajo realizado</label>
+                <textarea
+                  id="trabajoEditar"
+                  formControlName="trabajoRealizado"
+                  rows="3"
+                ></textarea>
+              </div>
+
+              <div class="field full-width">
+                <label for="observacionesEditar">Observaciones</label>
+                <textarea
+                  id="observacionesEditar"
+                  formControlName="observaciones"
+                  rows="2"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button
+                type="button"
+                class="secondary-button"
+                (click)="cancelarEdicion()"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="submit"
+                class="primary-button"
+                [disabled]="guardando"
+              >
+                Guardar cambios
+              </button>
+            </div>
+          </form>
+        </section>
+      }
+
+      @if (puedeCambiarEstado && estadosSiguientes.length > 0) {
+        <section class="panel state-panel">
+          <div class="panel-heading">
+            <div>
+              <h3>Avanzar proceso técnico</h3>
+              <p>
+                Elige uno de los estados permitidos para la etapa actual.
+              </p>
+            </div>
+          </div>
+
+          <form
+            [formGroup]="estadoForm"
+            (ngSubmit)="guardarCambioEstado()"
+          >
+            <div class="form-grid">
+              <div class="field">
+                <label for="nuevoEstado">Siguiente estado *</label>
+
+                <select
+                  id="nuevoEstado"
+                  formControlName="estadoAsistenciaId"
+                >
+                  <option [ngValue]="null">
+                    Selecciona el siguiente estado
+                  </option>
+
+                  @for (
+                    estado of estadosSiguientes;
+                    track estado.id
+                  ) {
+                    <option [ngValue]="estado.id">
+                      {{ estado.nombre }}
+                    </option>
+                  }
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="comentarioEstado">Comentario del cambio</label>
+                <input
+                  id="comentarioEstado"
+                  formControlName="comentario"
+                  placeholder="Ej.: se completaron las pruebas"
+                />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button
+                type="submit"
+                class="primary-button"
+                [disabled]="guardando"
+              >
+                Confirmar cambio de estado
+              </button>
+            </div>
+          </form>
+        </section>
+      }
+
+      @if (asistencia.fechaCierre) {
+        <div class="closed-notice">
+          Esta asistencia fue cerrada. El proceso de estados está bloqueado
+          y no se pueden agregar nuevas actividades.
+        </div>
+      }
+
+      <section class="content-card activity-section">
+        <div class="panel-heading">
+          <div>
+            <h3>Actividades técnicas</h3>
+            <p>
+              Registro de inspecciones, pruebas, reparaciones y resultados.
+            </p>
+          </div>
+        </div>
+
+        @if (puedeRegistrarActividad) {
+          <form
+            class="activity-form"
+            [formGroup]="actividadForm"
+            (ngSubmit)="guardarActividad()"
+          >
+            <div class="field">
+              <label for="descripcionActividad">
+                Descripción de la actividad *
+              </label>
+
+              <input
+                id="descripcionActividad"
+                formControlName="descripcion"
+                maxlength="255"
+                placeholder="Ej.: prueba de fuente de alimentación"
+              />
+
+              @if (
+                actividadForm.controls.descripcion.touched &&
+                actividadForm.controls.descripcion.hasError('required')
+              ) {
+                <small>La descripción es obligatoria.</small>
+              }
+            </div>
+
+            <div class="field">
+              <label for="resultadoActividad">Resultado</label>
+              <input
+                id="resultadoActividad"
+                formControlName="resultado"
+                maxlength="255"
+                placeholder="Ej.: fuente funcionando correctamente"
+              />
+            </div>
+
+            <div class="field">
+              <label for="observacionActividad">Observación</label>
+              <input
+                id="observacionActividad"
+                formControlName="observacion"
+                maxlength="255"
+                placeholder="Detalles complementarios"
+              />
+            </div>
+
+            <div class="form-actions">
+              @if (actividadEditandoId !== null) {
+                <button
+                  type="button"
+                  class="secondary-button"
+                  (click)="cancelarEdicionActividad()"
+                >
+                  Cancelar edición
+                </button>
+              }
+
+              <button
+                type="submit"
+                class="primary-button"
+                [disabled]="guardando"
+              >
+                @if (actividadEditandoId !== null) {
+                  Guardar actividad
+                } @else {
+                  Registrar actividad
+                }
+              </button>
+            </div>
+          </form>
+        }
+
+        @if (actividades.length === 0) {
+          <div class="empty-state">
+            No hay actividades registradas para esta asistencia.
+          </div>
+        } @else {
+          <div class="activity-list">
+            @for (actividad of actividades; track actividad.id) {
+              <article class="activity-item">
+                <div class="activity-marker"></div>
+
+                <div class="activity-body">
+                  <div class="activity-title">
+                    <strong>{{ actividad.descripcion }}</strong>
+                    <span>
+                      {{ actividad.fechaActividad | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+
+                  <p>
+                    <strong>Resultado:</strong>
+                    {{ actividad.resultado || 'Sin resultado registrado.' }}
+                  </p>
+
+                  @if (actividad.observacion) {
+                    <p>
+                      <strong>Observación:</strong>
+                      {{ actividad.observacion }}
+                    </p>
+                  }
+                </div>
+
+                @if (puedeRegistrarActividad) {
+                  <button
+                    type="button"
+                    class="text-button"
+                    (click)="editarActividad(actividad)"
+                  >
+                    Editar
+                  </button>
+                }
+              </article>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="content-card history-section">
+        <div class="panel-heading">
+          <div>
+            <h3>Historial de estados</h3>
+            <p>
+              Seguimiento cronológico de cada transición del proceso.
+            </p>
+          </div>
+        </div>
+
+        @if (cargandoDetalle) {
+          <div class="empty-state">Cargando historial y actividades...</div>
+        } @else if (historial.length === 0) {
+          <div class="empty-state">
+            No hay historial registrado para esta asistencia.
+          </div>
+        } @else {
+          <div class="timeline">
+            @for (registro of historial; track registro.id) {
+              <article class="timeline-item">
+                <div class="timeline-marker"></div>
+
+                <div class="timeline-content">
+                  <div class="timeline-heading">
+                    <strong>{{ registro.estadoAsistenciaNombre }}</strong>
+                    <span>
+                      {{ registro.fechaCambio | date:'dd/MM/yyyy HH:mm' }}
+                    </span>
+                  </div>
+
+                  <p>
+                    {{ registro.comentario || 'Sin comentario.' }}
+                  </p>
+                </div>
+              </article>
+            }
+          </div>
+        }
+      </section>
+    </section>
+  }
+</main>
