@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { HttpParams } from '@angular/common/http';
 
 import { environment } from '../../../environments/environment';
 import {
@@ -44,4 +45,20 @@ export class EmpleadoService {
       request
     );
   }
+
+  listarRecientes(): Observable<EmpleadoResponse[]> {
+  return this.http.get<EmpleadoResponse[]>(
+    `${this.url}/recientes`
+  );
+}
+
+buscarActivos(termino: string): Observable<EmpleadoResponse[]> {
+  const params = new HttpParams()
+    .set('termino', termino);
+
+  return this.http.get<EmpleadoResponse[]>(
+    `${this.url}/buscar`,
+    { params }
+  );
+}
 }

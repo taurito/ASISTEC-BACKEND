@@ -11,7 +11,14 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of, Subject } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  finalize,
+  switchMap
+} from 'rxjs/operators';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { ActivoService } from '../../activos/activo.service';
@@ -23,6 +30,8 @@ import { AsistenciaService } from '../asistencia.service';
 import { AsistenciaCatalogosService } from '../asistencia-catalogos.service';
 import { HistorialAsistenciaService } from '../historial-asistencia.service';
 import { ActividadAsistenciaService } from '../actividad-asistencia.service';
+import { TecnicoAsistenciaService } from '../tecnico-asistencia.service';
+
 
 import {
   ActividadAsistenciaResponse,
@@ -31,7 +40,8 @@ import {
   AsistenciaResponse,
   AsistenciaUpdateRequest,
   CambioEstadoAsistenciaRequest,
-  HistorialEstadoAsistenciaResponse
+  HistorialEstadoAsistenciaResponse,
+  TecnicoOption
 } from '../asistencia.models';
 
 @Component({
@@ -52,6 +62,11 @@ export class AsistenciasComponent implements OnInit {
   private readonly activoService = inject(ActivoService);
   private readonly empleadoService = inject(EmpleadoService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly tecnicoService = inject(TecnicoAsistenciaService);
+  private readonly busquedaEmpleado$ = new Subject<string>();
+
+
+  tecnicosDisponibles: TecnicoOption[] = [];
 
   asistencias: AsistenciaResponse[] = [];
   seleccionada: AsistenciaResponse | null = null;
@@ -75,6 +90,11 @@ export class AsistenciasComponent implements OnInit {
 
   mensaje = '';
   error = '';
+
+  empleadoSeleccionado: EmpleadoResponse | null = null;
+  busquedaEmpleado = '';
+  mostrarOpcionesEmpleado = false;
+  buscandoEmpleados = false;
 
   private readonly transiciones: Record<string, string[]> = {
     'RECIBIDO': ['EN DIAGNOSTICO'],
@@ -149,6 +169,7 @@ export class AsistenciasComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.configurarBusquedaEmpleados();
     this.cargarDatos();
   }
 
@@ -189,7 +210,7 @@ export class AsistenciasComponent implements OnInit {
 
     const permitidos =
       this.transiciones[
-        this.seleccionada.estadoAsistenciaNombre
+      this.seleccionada.estadoAsistenciaNombre
       ] ?? [];
 
     return this.estados.filter(estado =>
@@ -259,28 +280,37 @@ export class AsistenciasComponent implements OnInit {
   }
 
   private cargarOpcionesAdmin(): void {
+
     forkJoin({
       activos: this.activoService.listar(),
-      empleados: this.empleadoService.listar()
+      empleados: this.empleadoService.listarRecientes(),
+      tecnicos: this.tecnicoService.listar()
     }).subscribe({
       next: resultado => {
+
         this.activosDisponibles = resultado.activos.filter(
           activo =>
-            activo.activo
-            && activo.estadoActivoNombre === 'ACTIVO'
+            activo.activo &&
+            activo.estadoActivoNombre === 'ACTIVO'
         );
 
         this.empleadosDisponibles = resultado.empleados.filter(
           empleado => empleado.activo
         );
 
+        this.tecnicosDisponibles = resultado.tecnicos;
+
         this.cdr.markForCheck();
       },
+
       error: error => {
-        console.error('Error al cargar opciones:', error);
+        console.error(
+          'Error al cargar los datos para la asistencia:',
+          error
+        );
 
         this.error =
-          'No se pudieron cargar los equipos o empleados para registrar asistencias.';
+          'No se pudieron cargar los equipos, empleados o técnicos disponibles.';
 
         this.cdr.markForCheck();
       }
@@ -311,11 +341,21 @@ export class AsistenciasComponent implements OnInit {
 
     this.mostrarCrear = true;
     this.mostrarEditar = false;
+
+    this.empleadoSeleccionado = null;
+    this.busquedaEmpleado = '';
+    this.mostrarOpcionesEmpleado = false;
+    this.busquedaEmpleado$.next('');
   }
 
   cancelarCrear(): void {
     this.mostrarCrear = false;
     this.crearForm.reset();
+
+    this.empleadoSeleccionado = null;
+    this.busquedaEmpleado = '';
+    this.mostrarOpcionesEmpleado = false;
+    this.busquedaEmpleado$.next('');
   }
 
   crearAsistencia(): void {
@@ -363,8 +403,7 @@ export class AsistenciasComponent implements OnInit {
     this.asistenciaService.crear(request).subscribe({
       next: creada => {
         this.guardando = false;
-        this.mostrarCrear = false;
-        this.crearForm.reset();
+        this.cancelarCrear();
 
         this.cargarLista();
         this.verDetalle(creada);
@@ -510,7 +549,7 @@ export class AsistenciasComponent implements OnInit {
         this.verDetalle(actualizada);
 
         this.mensaje =
-            'La asistencia se actualizó correctamente.';
+          'La asistencia se actualizó correctamente.';
 
         this.cdr.markForCheck();
       },
@@ -564,7 +603,7 @@ export class AsistenciasComponent implements OnInit {
         this.cargarLista();
         this.verDetalle(actualizada);
 
-         this.mensaje =
+        this.mensaje =
           `La asistencia cambió al estado ${actualizada.estadoAsistenciaNombre}.`;
 
         this.cdr.markForCheck();
@@ -605,68 +644,68 @@ export class AsistenciasComponent implements OnInit {
   }
 
   guardarActividad(): void {
-  if (
-    !this.puedeRegistrarActividad ||
-    !this.seleccionada ||
-    this.guardando
-  ) {
-    return;
-  }
-
-  this.error = '';
-  this.mensaje = '';
-
-  if (this.actividadForm.invalid) {
-    this.actividadForm.markAllAsTouched();
-    return;
-  }
-
-  // Guardar estos valores antes de limpiar el formulario.
-  const asistenciaActual = this.seleccionada;
-  const actividadId = this.actividadEditandoId;
-  const estabaEditando = actividadId !== null;
-
-  const valor = this.actividadForm.getRawValue();
-
-  const request = {
-    asistenciaId: asistenciaActual.id,
-    descripcion: valor.descripcion?.trim() ?? '',
-    resultado: valor.resultado?.trim() || null,
-    observacion: valor.observacion?.trim() || null
-  };
-
-  this.guardando = true;
-
-  const operacion = actividadId !== null
-    ? this.actividadService.actualizar(actividadId, request)
-    : this.actividadService.crear(request);
-
-  operacion.subscribe({
-    next: () => {
-      this.guardando = false;
-
-      // Limpiar el formulario de actividad.
-      this.cancelarEdicionActividad();
-
-      // Actualizar la lista y recargar el detalle.
-      this.cargarLista();
-      this.verDetalle(asistenciaActual);
-
-      // Determinar el mensaje con el valor original.
-      this.mensaje = estabaEditando
-        ? 'La actividad se actualizó correctamente.'
-        : 'La actividad se registró correctamente.';
-
-      this.cdr.markForCheck();
-    },
-
-    error: error => {
-      this.guardando = false;
-      this.error = this.mensajeError(error);
-      this.cdr.markForCheck();
+    if (
+      !this.puedeRegistrarActividad ||
+      !this.seleccionada ||
+      this.guardando
+    ) {
+      return;
     }
-  });
-}
+
+    this.error = '';
+    this.mensaje = '';
+
+    if (this.actividadForm.invalid) {
+      this.actividadForm.markAllAsTouched();
+      return;
+    }
+
+    // Guardar estos valores antes de limpiar el formulario.
+    const asistenciaActual = this.seleccionada;
+    const actividadId = this.actividadEditandoId;
+    const estabaEditando = actividadId !== null;
+
+    const valor = this.actividadForm.getRawValue();
+
+    const request = {
+      asistenciaId: asistenciaActual.id,
+      descripcion: valor.descripcion?.trim() ?? '',
+      resultado: valor.resultado?.trim() || null,
+      observacion: valor.observacion?.trim() || null
+    };
+
+    this.guardando = true;
+
+    const operacion = actividadId !== null
+      ? this.actividadService.actualizar(actividadId, request)
+      : this.actividadService.crear(request);
+
+    operacion.subscribe({
+      next: () => {
+        this.guardando = false;
+
+        // Limpiar el formulario de actividad.
+        this.cancelarEdicionActividad();
+
+        // Actualizar la lista y recargar el detalle.
+        this.cargarLista();
+        this.verDetalle(asistenciaActual);
+
+        // Determinar el mensaje con el valor original.
+        this.mensaje = estabaEditando
+          ? 'La actividad se actualizó correctamente.'
+          : 'La actividad se registró correctamente.';
+
+        this.cdr.markForCheck();
+      },
+
+      error: error => {
+        this.guardando = false;
+        this.error = this.mensajeError(error);
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
   private cargarLista(): void {
     this.asistenciaService.listar().subscribe({
@@ -688,6 +727,103 @@ export class AsistenciasComponent implements OnInit {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  private configurarBusquedaEmpleados(): void {
+
+    this.busquedaEmpleado$
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+
+        switchMap(termino => {
+          const texto = termino.trim();
+
+          this.buscandoEmpleados = true;
+          this.cdr.markForCheck();
+
+          const peticion = texto.length === 0
+            ? this.empleadoService.listarRecientes()
+            : texto.length < 2
+              ? of([] as EmpleadoResponse[])
+              : this.empleadoService.buscarActivos(texto);
+
+          return peticion.pipe(
+            catchError(error => {
+              console.error(
+                'Error al buscar empleados:',
+                error
+              );
+
+              this.error =
+                'No se pudo realizar la búsqueda de empleados.';
+
+              return of([] as EmpleadoResponse[]);
+            }),
+
+            finalize(() => {
+              this.buscandoEmpleados = false;
+              this.cdr.markForCheck();
+            })
+          );
+        })
+      )
+      .subscribe(empleados => {
+        this.empleadosDisponibles = empleados;
+        this.cdr.markForCheck();
+      });
+  }
+
+  buscarEmpleado(event: Event): void {
+
+    const input = event.target as HTMLInputElement;
+
+    this.busquedaEmpleado = input.value;
+
+    // Al empezar una búsqueda, es necesario volver a seleccionar
+    // un empleado de los resultados.
+    this.empleadoSeleccionado = null;
+    this.crearForm.controls.empleadoId.setValue(null);
+
+    this.mostrarOpcionesEmpleado = true;
+
+    this.busquedaEmpleado$.next(this.busquedaEmpleado);
+  }
+
+  abrirOpcionesEmpleado(): void {
+
+    this.mostrarOpcionesEmpleado = true;
+
+    // Al abrir el campo se muestran los cuatro más recientes.
+    // Si ya hay una selección, el usuario todavía puede cambiarla.
+    this.busquedaEmpleado$.next(
+      this.empleadoSeleccionado
+        ? ''
+        : this.busquedaEmpleado
+    );
+  }
+
+  cerrarOpcionesEmpleado(): void {
+    this.mostrarOpcionesEmpleado = false;
+  }
+
+  seleccionarEmpleado(empleado: EmpleadoResponse): void {
+
+    this.empleadoSeleccionado = empleado;
+
+    this.busquedaEmpleado =
+      `${empleado.nombres} ${empleado.apellidos}`;
+
+    this.crearForm.controls.empleadoId.setValue(
+      empleado.id
+    );
+
+    this.crearForm.controls.empleadoId.markAsTouched();
+
+    this.mostrarOpcionesEmpleado = false;
+    this.error = '';
+
+    this.cdr.markForCheck();
   }
 
   private mensajeError(error: HttpErrorResponse): string {

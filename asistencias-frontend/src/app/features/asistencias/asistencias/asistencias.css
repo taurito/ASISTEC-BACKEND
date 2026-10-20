@@ -346,7 +346,7 @@ tbody tr:hover {
   padding: 24px;
 }
 
-.content-card > p {
+.content-card>p {
   margin: 14px 0 0;
   color: #5f6e83;
   font-size: 13px;
@@ -588,4 +588,140 @@ tbody tr:hover {
   .activity-item {
     flex-wrap: wrap;
   }
+}
+
+/* Buscador de personas */
+.employee-search-field {
+  min-width: 0;
+}
+
+.employee-search-control {
+  position: relative;
+  width: 100%;
+}
+
+.employee-search-control>input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: #1e293b;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.employee-search-control>input:focus {
+  border-color: #4779b8;
+  box-shadow: 0 0 0 3px rgb(71 121 184 / 13%);
+}
+
+/* Panel desplegable */
+.employee-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #dce3ed;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgb(15 35 65 / 14%);
+}
+
+.options-caption {
+  padding: 11px 14px;
+  border-bottom: 1px solid #e9eef5;
+  background: #f7f9fc;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Cada empleado */
+.employee-options .employee-option {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 13px 15px;
+  border: 0;
+  border-bottom: 1px solid #edf1f6;
+  border-radius: 0;
+  background: #fff;
+  color: #243449;
+  font-family: inherit;
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.employee-options .employee-option:last-child {
+  border-bottom: 0;
+}
+
+.employee-options .employee-option:hover,
+.employee-options .employee-option:focus-visible,
+.employee-options .employee-option[aria-selected="true"] {
+  background: #f1f6fc;
+  outline: none;
+}
+
+.employee-option-name {
+  display: block;
+  color: #1e3552;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.employee-option-meta {
+  display: block;
+  color: #6b7b90;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.employee-option-separator {
+  padding: 0 4px;
+  color: #a0aec0;
+}
+
+.employee-option-unit {
+  display: inline-block;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: #edf3fa;
+  color: #47688f;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.employee-option-message {
+  padding: 16px;
+  color: #718096;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.field-hint {
+  color: #748297;
+  font-size: 11px;
+  line-height: 1.6;
 }

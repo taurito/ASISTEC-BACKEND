@@ -51,6 +51,23 @@ public class EmpleadoController {
         );
     }
 
+    @GetMapping("/recientes")
+    public ResponseEntity<List<EmpleadoResponse>> listarRecientes() {
+
+        return ResponseEntity.ok(
+                empleadoService.listarRecientes()
+        );
+    }
+
+    @GetMapping("/buscar")
+    public ResponseEntity<List<EmpleadoResponse>> buscar(
+            @RequestParam String termino) {
+
+        return ResponseEntity.ok(
+                empleadoService.buscarActivos(termino)
+        );
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(
             @PathVariable Long id) {

@@ -9,6 +9,8 @@ import tec.asistencias.entity.Unidad;
 import tec.asistencias.exception.ResourceNotFoundException;
 import tec.asistencias.repository.EmpleadoRepository;
 import tec.asistencias.repository.UnidadRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -91,6 +93,36 @@ public class EmpleadoService {
 
         return convertirAResponse(actualizado);
     }
+
+    // LISTAR LOS CUATRO EMPLEADOS ACTIVOS MÁS RECIENTES
+    @Transactional(readOnly = true)
+    public List<EmpleadoResponse> listarRecientes() {
+
+        return empleadoRepository
+                .findTop4ByActivoTrueOrderByCreatedAtDescIdDesc()
+                .stream()
+                .map(this::convertirAResponse)
+                .toList();
+    }
+
+    // BUSCAR ENTRE TODOS LOS EMPLEADOS ACTIVOS
+    @Transactional(readOnly = true)
+    public List<EmpleadoResponse> buscarActivos(String termino) {
+
+        if (termino == null || termino.trim().length() < 2) {
+            return List.of();
+        }
+
+        return empleadoRepository
+                .buscarActivosPorTermino(
+                        termino.trim(),
+                        PageRequest.of(0, 10)
+                )
+                .stream()
+                .map(this::convertirAResponse)
+                .toList();
+    }
+
     public void eliminar(Long id) {
 
         if (!empleadoRepository.existsById(id)) {

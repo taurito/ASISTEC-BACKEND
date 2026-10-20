@@ -91,3 +91,11 @@ export interface AsistenciaCatalogoOption {
   descripcion?: string | null;
   activo?: boolean;
 }
+
+export interface TecnicoOption {
+  usuarioId: number;
+  username: string;
+  empleadoId: number;
+  empleadoNombre: string;
+  cargo: string | null;
+}

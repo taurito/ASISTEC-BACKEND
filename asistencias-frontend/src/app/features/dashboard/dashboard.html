@@ -2,96 +2,299 @@
   <header class="topbar">
     <div class="brand">
       <div class="brand-mark">AS</div>
+
       <div>
-        <strong>Asistencias</strong>
+        <strong>Asistencias técnicas</strong>
         <span>Unidad de Informática</span>
       </div>
     </div>
 
-    <button type="button" class="logout-button" (click)="cerrarSesion()">
-      Cerrar sesión
-    </button>
+    <div class="topbar-actions">
+      <div class="user-info">
+        <strong>{{ nombreUsuario }}</strong>
+        <span>{{ rolPrincipal }}</span>
+      </div>
+
+      <button
+        type="button"
+        class="secondary-button"
+        (click)="cerrarSesion()"
+      >
+        Cerrar sesión
+      </button>
+    </div>
   </header>
 
   <section class="dashboard-content">
-    <p class="eyebrow">PANEL PRINCIPAL</p>
-
-    <h1>Bienvenido, {{ nombreUsuario }}</h1>
-
-    <p class="welcome-text">
-      Has iniciado sesión correctamente en el Sistema de Asistencias Técnicas.
-    </p>
-
-    <div class="profile-card">
-      <div class="avatar">
-        {{ nombreUsuario.charAt(0).toUpperCase() }}
+    <div class="welcome-header">
+      <div>
+        <p class="eyebrow">PANEL DE CONTROL</p>
+        <h1>Resumen del sistema</h1>
+        <p class="subtitle">
+          Consulta el estado del inventario y el trabajo de soporte técnico.
+        </p>
       </div>
 
-      <div class="profile-info">
-        <span class="profile-label">Sesión activa</span>
-        <strong>{{ nombreUsuario }}</strong>
-        <span class="role">{{ rolPrincipal }}</span>
+      <button
+        class="secondary-button"
+        type="button"
+        [disabled]="cargando"
+        (click)="cargarDatos()"
+      >
+        {{ cargando ? 'Actualizando...' : 'Actualizar indicadores' }}
+      </button>
+    </div>
+
+    @if (error) {
+      <div class="alert error" role="alert">
+        {{ error }}
       </div>
-    </div>
+    }
 
-    <h2>Gestión del sistema</h2>
+    @if (cargando && activos.length === 0 && asistencias.length === 0) {
+      <div class="loading-state">
+        Cargando información del sistema...
+      </div>
+    } @else {
+      <section class="metrics-grid">
+        <article class="metric-card">
+          <span class="metric-label">Activos habilitados</span>
+          <strong>{{ totalActivos }}</strong>
+          <span class="metric-description">
+            Equipos habilitados en inventario
+          </span>
+          <a routerLink="/activos" class="card-link">
+            Consultar inventario →
+          </a>
+        </article>
 
-    <div class="module-grid" >
+        <article class="metric-card">
+          <span class="metric-label">Asistencias abiertas</span>
+          <strong>{{ totalAbiertas }}</strong>
+          <span class="metric-description">
+            Casos que aún no se han cerrado
+          </span>
+          <a routerLink="/asistencias" class="card-link">
+            Ver asistencias →
+          </a>
+        </article>
 
-      @if (puedeConsultarEmpleados) {
-      <article class="module-card" routerLink="/empleados"> 
-        <span class="module-number">01</span>
-        <h3>Funcionarios</h3>
-        <p>
-          Consulta el directorio del personal y sus unidades institucionales.
-        </p>
+        <article class="metric-card attention-card">
+          <span class="metric-label">Pendientes de entrega</span>
+          <strong>{{ totalPendientesEntrega }}</strong>
+          <span class="metric-description">
+            Equipos listos para entregar
+          </span>
+          <a routerLink="/asistencias" class="card-link">
+            Revisar pendientes →
+          </a>
+        </article>
 
-        <a routerLink="/empleados" class="module-link">
-          Abrir módulo →
-        </a>
-      </article>
-      }
+        <article class="metric-card">
+          <span class="metric-label">Asistencias cerradas</span>
+          <strong>{{ totalCerradas }}</strong>
+          <span class="metric-description">
+            Registros con fecha de cierre
+          </span>
+          <a routerLink="/asistencias" class="card-link">
+            Consultar historial →
+          </a>
+        </article>
 
-      <article class="module-card" routerLink="/activos">
-        <span class="module-number">02</span>
-        <h3>Activos tecnológicos</h3>
-        <p>Consulta y administra el inventario de equipos.</p>
-        <a routerLink="/activos" class="module-link">Abrir módulo →</a>
-      </article>
+        <article class="metric-card">
+          <span class="metric-label">Tiempo promedio de cierre</span>
+          <strong class="metric-text">{{ promedioCierreTexto }}</strong>
+          <span class="metric-description">
+            Entre ingreso y cierre de cada caso
+          </span>
+        </article>
+      </section>
 
-      <article class="module-card" routerLink="/asistencias">
-        <span class="module-number">03</span>
-        <h3>Asistencias técnicas</h3>
-        <p>
-          Registra ingresos, controla las reparaciones y consulta
-          las actividades e historiales de cada equipo.
-        </p>
+      <section class="modules-section">
+        <div class="section-heading">
+          <div>
+            <h2>Módulos del sistema</h2>
+            <p>Acceso a las herramientas de gestión.</p>
+          </div>
+        </div>
 
-        <a routerLink="/asistencias" class="module-link">
-          Abrir módulo →
-        </a>
-     </article>
+        <div class="module-grid">
+          <a routerLink="/activos" class="module-card">
+            <span class="module-number">01</span>
+            <h3>Activos tecnológicos</h3>
+            <p>Consulta equipos, marcas, modelos y estados.</p>
+            <span class="module-link">Abrir módulo →</span>
+          </a>
 
-     <article class="module-card" routerLink="/asignaciones">
-        <span class="module-number">04</span>
-        <h3>Asignaciones de activos</h3>
-        <p>
-          Consulta responsables, entregas y devoluciones de los equipos.
-        </p>
+          <a routerLink="/asistencias" class="module-card">
+            <span class="module-number">04</span>
+            <h3>Asistencias técnicas</h3>
+            <p>Gestiona el seguimiento de reparaciones y mantenimiento.</p>
+            <span class="module-link">Abrir módulo →</span>
+          </a>
 
-        <a routerLink="/asignaciones" class="module-link">
-          Abrir módulo →
-        </a>
-      </article>
+          @if (puedeConsultarEmpleados) {
+            <a routerLink="/empleados" class="module-card">
+              <span class="module-number">02</span>
+              <h3>Funcionarios</h3>
+              <p>Consulta el personal y sus unidades institucionales.</p>
+              <span class="module-link">Abrir módulo →</span>
+            </a>
+          }
 
-      <article class="module-card">
-        <span class="module-number">05</span>
-        <h3>Historial y actividades</h3>
-        <p>Consulta los trabajos realizados sobre cada equipo.</p>
-        <span class="module-status">Próximamente</span>
-      </article>
+          <a routerLink="/asignaciones" class="module-card">
+            <span class="module-number">03</span>
+            <h3>Asignaciones</h3>
+            <p>Consulta responsables y movimientos de los equipos.</p>
+            <span class="module-link">Abrir módulo →</span>
+          </a>
 
-      
-    </div>
+        </div>
+      </section>
+
+      <section class="reports-grid">
+        <article class="report-card">
+          <div class="section-heading">
+            <div>
+              <h2>Activos reincidentes</h2>
+              <p>Equipos con más de una asistencia registrada.</p>
+            </div>
+          </div>
+
+          @if (reincidenciaActivos.length === 0) {
+            <div class="empty-state">
+              No hay activos con más de una asistencia registrada.
+            </div>
+          } @else {
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Equipo</th>
+                    <th>Código</th>
+                    <th>Ingresos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of reincidenciaActivos; track item.activoId) {
+                    <tr>
+                      <td>{{ item.activoNombre }}</td>
+                      <td>{{ item.codigoActivo }}</td>
+                      <td>
+                        <span class="count-chip">
+                          {{ item.totalAsistencias }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </article>
+
+        <article class="report-card">
+          <div class="section-heading">
+            <div>
+              <h2>Carga por técnico</h2>
+              <p>Asistencias registradas y casos abiertos.</p>
+            </div>
+          </div>
+
+          @if (cargaTecnicos.length === 0) {
+            <div class="empty-state">
+              Todavía no existen asistencias registradas.
+            </div>
+          } @else {
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Técnico</th>
+                    <th>Total</th>
+                    <th>Abiertas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (tecnico of cargaTecnicos; track tecnico.tecnicoId) {
+                    <tr>
+                      <td>{{ tecnico.tecnicoNombre }}</td>
+                      <td>{{ tecnico.totalAsistencias }}</td>
+                      <td>
+                        <span class="count-chip">
+                          {{ tecnico.abiertas }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </article>
+      </section>
+
+      <section class="reports-grid">
+        <article class="report-card">
+          <div class="section-heading">
+            <div>
+              <h2>Asistencias por estado</h2>
+              <p>Distribución según el estado actual de cada registro.</p>
+            </div>
+          </div>
+
+          @if (resumenEstados.length === 0) {
+            <div class="empty-state">
+              No hay información para mostrar.
+            </div>
+          } @else {
+            <div class="status-list">
+              @for (item of resumenEstados; track item.estado) {
+                <div class="status-row">
+                  <span>{{ item.estado }}</span>
+                  <strong>{{ item.total }}</strong>
+                </div>
+              }
+            </div>
+          }
+        </article>
+
+        <article class="report-card">
+          <div class="section-heading">
+            <div>
+              <h2>Últimas asistencias</h2>
+              <p>Los seis registros más recientes.</p>
+            </div>
+          </div>
+
+          @if (ultimasAsistencias.length === 0) {
+            <div class="empty-state">
+              No hay asistencias registradas.
+            </div>
+          } @else {
+            <div class="recent-list">
+              @for (item of ultimasAsistencias; track item.id) {
+                <a
+                  routerLink="/asistencias"
+                  class="recent-item"
+                >
+                  <div class="recent-main">
+                    <strong>{{ item.numeroAsistencia }}</strong>
+                    <span>{{ item.codigoActivo }} · {{ item.activoNombre }}</span>
+                    <small>
+                      {{ item.fechaIngreso | date:'dd/MM/yyyy HH:mm' }}
+                    </small>
+                  </div>
+
+                  <span class="status-chip">
+                    {{ item.estadoAsistenciaNombre }}
+                  </span>
+                </a>
+              }
+            </div>
+          }
+        </article>
+      </section>
+    }
   </section>
 </main>

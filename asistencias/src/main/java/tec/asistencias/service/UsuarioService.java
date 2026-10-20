@@ -14,6 +14,7 @@ import tec.asistencias.exception.ResourceNotFoundException;
 import tec.asistencias.repository.EmpleadoRepository;
 import tec.asistencias.repository.RolRepository;
 import tec.asistencias.repository.UsuarioRepository;
+import tec.asistencias.dto.TecnicoOptionResponse;
 
 import java.util.HashSet;
 import java.util.List;
@@ -144,6 +145,30 @@ public class UsuarioService {
                 usuarioRepository.save(usuario);
 
         return convertirAResponse(actualizado);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TecnicoOptionResponse> listarTecnicosActivos() {
+
+        return usuarioRepository
+                .findUsuariosActivosPorRolConEmpleado("TECNICO")
+                .stream()
+                .map(usuario -> {
+                    var empleado = usuario.getEmpleado();
+
+                    return TecnicoOptionResponse.builder()
+                            .usuarioId(usuario.getId())
+                            .username(usuario.getUsername())
+                            .empleadoId(empleado.getId())
+                            .empleadoNombre(
+                                    empleado.getNombres()
+                                            + " "
+                                            + empleado.getApellidos()
+                            )
+                            .cargo(empleado.getCargo())
+                            .build();
+                })
+                .toList();
     }
 
     // CONVERTIR ENTITY → RESPONSE

@@ -11,6 +11,7 @@ import tec.asistencias.repository.*;
 import tec.asistencias.exception.BusinessException;
 import tec.asistencias.exception.ResourceNotFoundException;
 import tec.asistencias.dto.AsistenciaUpdateRequest;
+import tec.asistencias.repository.UsuarioRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,6 +28,7 @@ public class AsistenciaService {
     private final ActivoRepository activoRepository;
     private final EmpleadoRepository empleadoRepository;
     private final TipoAsistenciaRepository tipoAsistenciaRepository;
+    private final UsuarioRepository usuarioRepository;
 
     public List<AsistenciaResponse> listarTodas() {
 
@@ -93,6 +95,11 @@ public class AsistenciaService {
                                         + request.getEmpleadoId()
                         )
                 );
+        if (!Boolean.TRUE.equals(empleado.getActivo())){
+            throw new BusinessException(
+                    "La persona que entrega el equipo debe ser un empleado activo."
+            );
+        }
 
         Empleado tecnico = empleadoRepository.findById(
                         request.getTecnicoId()
@@ -103,7 +110,7 @@ public class AsistenciaService {
                                         + request.getTecnicoId()
                         )
                 );
-
+        validarTecnico(tecnico.getId());
         TipoAsistencia tipoAsistencia =
                 tipoAsistenciaRepository.findById(
                                 request.getTipoAsistenciaId()
@@ -203,7 +210,7 @@ public class AsistenciaService {
                                         + request.getTecnicoId()
                         )
                 );
-
+        validarTecnico(tecnico.getId());
         TipoAsistencia tipoAsistencia =
                 tipoAsistenciaRepository.findById(
                                 request.getTipoAsistenciaId()
@@ -367,6 +374,21 @@ public class AsistenciaService {
         }
     }
 
+    private void validarTecnico(Long empleadoId) {
+
+        boolean esTecnico =
+                usuarioRepository.existeUsuarioActivoConRolPorEmpleado(
+                        empleadoId,
+                        "TECNICO"
+                );
+
+        if (!esTecnico) {
+            throw new BusinessException(
+                    "El empleado seleccionado no tiene una cuenta activa "
+                            + "asociada con el rol TECNICO."
+            );
+        }
+    }
     // ELIMINAR
     /*public void eliminar(Long id) {
 

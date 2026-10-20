@@ -9,6 +9,7 @@ import tec.asistencias.dto.UsuarioRequest;
 import tec.asistencias.dto.UsuarioResponse;
 import tec.asistencias.exception.ResourceNotFoundException;
 import tec.asistencias.service.UsuarioService;
+import tec.asistencias.dto.TecnicoOptionResponse;
 
 import java.util.List;
 
@@ -25,6 +26,14 @@ public class UsuarioController {
 
         return ResponseEntity.ok(
                 usuarioService.listarTodos()
+        );
+    }
+    // LISTAR TECNICOS
+    @GetMapping("/tecnicos")
+    public ResponseEntity<List<TecnicoOptionResponse>> listarTecnicos() {
+
+        return ResponseEntity.ok(
+                usuarioService.listarTecnicosActivos()
         );
     }
 
