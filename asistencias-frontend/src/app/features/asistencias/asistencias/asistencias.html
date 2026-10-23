@@ -73,21 +73,71 @@
           </select>
         </div>
 
-        <div class="field">
-          <label for="activoId">Equipo tecnológico *</label>
+        <div class="field employee-search-field">
+          <label for="activoBusqueda">Equipo tecnológico *</label>
 
-          <select id="activoId" formControlName="activoId">
-            <option [ngValue]="null">Selecciona un equipo</option>
+          <div class="employee-search-control">
+            <input id="activoBusqueda" type="text" [value]="busquedaActivo" (input)="buscarActivo($event)"
+              (focus)="abrirOpcionesActivo()" (blur)="cerrarOpcionesActivo()"
+              placeholder="Buscar por nombre, código, serie o marca" autocomplete="off" role="combobox"
+              aria-controls="activos-opciones" [attr.aria-expanded]="mostrarOpcionesActivo" aria-autocomplete="list" />
 
-            @for (activo of activosDisponibles; track activo.id) {
-            <option [ngValue]="activo.id">
-              {{ activo.nombre }} - {{ activo.codigoActivo }}
-            </option>
+            @if (mostrarOpcionesActivo) {
+            <div id="activos-opciones" class="employee-options" role="listbox">
+              @if (buscandoActivos) {
+              <div class="employee-option-message">
+                Buscando equipos...
+              </div>
+              } @else if (activosDisponibles.length > 0) {
+              <div class="options-caption">
+                @if (busquedaActivo.trim().length >= 2) {
+                Resultados de búsqueda
+                } @else {
+                Últimos 4 equipos registrados
+                }
+              </div>
+
+              @for (activo of activosDisponibles; track activo.id) {
+              <button type="button" class="employee-option" role="option"
+                [attr.aria-selected]="activoSeleccionado?.id === activo.id" (mousedown)="$event.preventDefault()"
+                (click)="seleccionarActivo(activo)">
+                <span class="employee-option-name">
+                  {{ activo.nombre }}
+                </span>
+
+                <span class="employee-option-meta">
+                  Código: {{ activo.codigoActivo }}
+                  · Serie: {{ activo.serie || 'Sin serie' }}
+                </span>
+
+                <span class="employee-option-unit">
+                  {{ activo.marcaNombre || activo.marcaNombre }}
+                  · Modelo: {{ activo.modelo || 'Sin modelo' }}
+                </span>
+              </button>
+              }
+              } @else if (busquedaActivo.trim().length === 1) {
+              <div class="employee-option-message">
+                Escribe al menos dos caracteres para buscar.
+              </div>
+              } @else if (busquedaActivo.trim().length >= 2) {
+              <div class="employee-option-message">
+                No se encontraron equipos con ese criterio.
+              </div>
+              } @else {
+              <div class="employee-option-message">
+                No hay equipos registrados disponibles.
+              </div>
+              }
+            </div>
             }
-          </select>
+          </div>
 
-          @if (activosDisponibles.length === 0) {
-          <small>No hay equipos disponibles para recibir.</small>
+          @if (
+          crearForm.controls.activoId.touched &&
+          crearForm.controls.activoId.hasError('required')
+          ) {
+          <small>Selecciona el equipo que ingresa a mantenimiento.</small>
           }
         </div>
 
@@ -254,7 +304,7 @@
           <tr>
             <th>N.º asistencia</th>
             <th>Equipo</th>
-            <th>Empleado</th>
+            <th>funcionario</th>
             <th>Técnico</th>
             <th>Ingreso</th>
             <th>Estado</th>

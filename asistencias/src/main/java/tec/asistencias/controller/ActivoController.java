@@ -36,6 +36,17 @@ public class ActivoController {
                 );
     }
 
+    @GetMapping("/recientes")
+    public ResponseEntity<List<ActivoResponse>> listarRecientes() {
+        return ResponseEntity.ok(activoService.listarRecientes());
+    }
+
+    @GetMapping("/buscar")
+    public ResponseEntity<List<ActivoResponse>> buscar(
+            @RequestParam String termino) {
+        return ResponseEntity.ok(activoService.buscarActivos(termino));
+    }
+
     @PostMapping
     public ResponseEntity<ActivoResponse> guardar(@Valid @RequestBody ActivoRequest request){
         return ResponseEntity

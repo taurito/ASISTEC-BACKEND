@@ -64,6 +64,7 @@ export class AsistenciasComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly tecnicoService = inject(TecnicoAsistenciaService);
   private readonly busquedaEmpleado$ = new Subject<string>();
+  private readonly busquedaActivo$ = new Subject<string>();
 
 
   tecnicosDisponibles: TecnicoOption[] = [];
@@ -95,6 +96,11 @@ export class AsistenciasComponent implements OnInit {
   busquedaEmpleado = '';
   mostrarOpcionesEmpleado = false;
   buscandoEmpleados = false;
+
+  activoSeleccionado: ActivoResponse | null = null;
+  busquedaActivo = '';
+  mostrarOpcionesActivo = false;
+  buscandoActivos = false;
 
   private readonly transiciones: Record<string, string[]> = {
     'RECIBIDO': ['EN DIAGNOSTICO'],
@@ -170,6 +176,7 @@ export class AsistenciasComponent implements OnInit {
 
   ngOnInit(): void {
     this.configurarBusquedaEmpleados();
+    this.configurarBusquedaActivos();
     this.cargarDatos();
   }
 
@@ -346,6 +353,11 @@ export class AsistenciasComponent implements OnInit {
     this.busquedaEmpleado = '';
     this.mostrarOpcionesEmpleado = false;
     this.busquedaEmpleado$.next('');
+
+    this.activoSeleccionado = null;
+    this.busquedaActivo = '';
+    this.mostrarOpcionesActivo = false;
+    this.busquedaActivo$.next('');
   }
 
   cancelarCrear(): void {
@@ -356,6 +368,11 @@ export class AsistenciasComponent implements OnInit {
     this.busquedaEmpleado = '';
     this.mostrarOpcionesEmpleado = false;
     this.busquedaEmpleado$.next('');
+
+    this.activoSeleccionado = null;
+    this.busquedaActivo = '';
+    this.mostrarOpcionesActivo = false;
+    this.busquedaActivo$.next('');
   }
 
   crearAsistencia(): void {
@@ -801,6 +818,79 @@ export class AsistenciasComponent implements OnInit {
         ? ''
         : this.busquedaEmpleado
     );
+  }
+
+  private configurarBusquedaActivos(): void {
+    this.busquedaActivo$
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap(termino => {
+          const texto = termino.trim();
+
+          this.buscandoActivos = true;
+          this.cdr.markForCheck();
+
+          const peticion = texto.length === 0
+            ? this.activoService.listarRecientes()
+            : texto.length < 2
+              ? of([] as ActivoResponse[])
+              : this.activoService.buscarActivos(texto);
+
+          return peticion.pipe(
+            catchError(error => {
+              console.error('Error buscando equipos:', error);
+              this.error = 'No se pudo realizar la búsqueda de equipos.';
+              return of([] as ActivoResponse[]);
+            }),
+            finalize(() => {
+              this.buscandoActivos = false;
+              this.cdr.markForCheck();
+            })
+          );
+        })
+      )
+      .subscribe(activos => {
+        this.activosDisponibles = activos;
+        this.cdr.markForCheck();
+      });
+  }
+
+  buscarActivo(event: Event): void {
+    const input = event.target as HTMLInputElement;
+
+    this.busquedaActivo = input.value;
+    this.activoSeleccionado = null;
+    this.crearForm.controls.activoId.setValue(null);
+    this.mostrarOpcionesActivo = true;
+
+    this.busquedaActivo$.next(this.busquedaActivo);
+  }
+
+  abrirOpcionesActivo(): void {
+    this.mostrarOpcionesActivo = true;
+
+    this.busquedaActivo$.next(
+      this.activoSeleccionado ? '' : this.busquedaActivo
+    );
+  }
+
+  cerrarOpcionesActivo(): void {
+    this.mostrarOpcionesActivo = false;
+  }
+
+  seleccionarActivo(activo: ActivoResponse): void {
+    this.activoSeleccionado = activo;
+    this.busquedaActivo =
+      `${activo.nombre} · ${activo.codigoActivo}`;
+
+    this.crearForm.controls.activoId.setValue(activo.id);
+    this.crearForm.controls.activoId.markAsTouched();
+
+    this.mostrarOpcionesActivo = false;
+    this.error = '';
+
+    this.cdr.markForCheck();
   }
 
   cerrarOpcionesEmpleado(): void {

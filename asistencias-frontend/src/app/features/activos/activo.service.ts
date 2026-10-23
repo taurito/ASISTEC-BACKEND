@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -32,6 +32,21 @@ export class ActivoService {
     return this.http.put<ActivoResponse>(
       `${this.url}/${id}`,
       request
+    );
+  }
+
+  listarRecientes(): Observable<ActivoResponse[]> {
+    return this.http.get<ActivoResponse[]>(
+      `${this.url}/api/activos/recientes`
+    );
+  }
+
+  buscarActivos(termino: string): Observable<ActivoResponse[]> {
+    const params = new HttpParams().set('termino', termino);
+
+    return this.http.get<ActivoResponse[]>(
+      `${this.url}/api/activos/buscar`,
+      { params }
     );
   }
 }

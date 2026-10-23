@@ -14,6 +14,9 @@ import tec.asistencias.repository.EstadoActivoRepository;
 import tec.asistencias.repository.MarcaRepository;
 import tec.asistencias.repository.TipoActivoRepository;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -178,5 +181,28 @@ public class ActivoService {
                 )
 
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActivoResponse> listarRecientes() {
+        return activoRepository
+                .findTop4ByActivoTrueOrderByCreatedAtDescIdDesc()
+                .stream()
+                .map(this::convertirAResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActivoResponse> buscarActivos(String termino) {
+        if (termino == null || termino.trim().length() < 2) {
+            return List.of();
+        }
+
+        return activoRepository.buscarActivosPorTermino(
+                        termino.trim(),
+                        PageRequest.of(0, 10)
+                ).stream()
+                .map(this::convertirAResponse)
+                .toList();
     }
 }
