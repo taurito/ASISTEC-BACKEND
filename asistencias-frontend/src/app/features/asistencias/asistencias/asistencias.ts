@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import {
   FormBuilder,
+  FormGroup,
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
@@ -184,6 +185,10 @@ export class AsistenciasComponent implements OnInit {
     return this.authService.tieneRol('ADMIN');
   }
 
+  get esTecnico(): boolean {
+    return this.authService.tieneRol('TECNICO');
+  }
+
   get puedeTrabajar(): boolean {
     return this.authService.tieneRol('ADMIN', 'TECNICO');
   }
@@ -329,7 +334,7 @@ export class AsistenciasComponent implements OnInit {
   }
 
   abrirCrear(): void {
-    if (!this.esAdmin) {
+    if (!this.esAdmin && !this.esTecnico) {
       return;
     }
 
@@ -376,7 +381,7 @@ export class AsistenciasComponent implements OnInit {
   }
 
   crearAsistencia(): void {
-    if (!this.esAdmin || this.guardando) {
+    if ((!this.esAdmin && !this.esTecnico) || this.guardando) {
       return;
     }
 

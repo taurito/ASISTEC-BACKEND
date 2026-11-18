@@ -150,6 +150,12 @@ public class SecurityConfig {
                                 "CONSULTA"
                         )
 
+                        // ADMINISTRADORES Y TÉCNICOS PUEDEN CREAR ASISTENCIAS
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/asistencias/**"
+                        ).hasAnyRole("ADMIN", "TECNICO")
+
                         // LOS TÉCNICOS Y ADMINISTRADORES
                         // PUEDEN REGISTRAR ACTIVIDADES
                         .requestMatchers(

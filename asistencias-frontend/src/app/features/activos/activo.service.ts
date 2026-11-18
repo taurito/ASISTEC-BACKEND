@@ -37,7 +37,7 @@ export class ActivoService {
 
   listarRecientes(): Observable<ActivoResponse[]> {
     return this.http.get<ActivoResponse[]>(
-      `${this.url}/api/activos/recientes`
+      `${this.url}/recientes`
     );
   }
 
@@ -45,7 +45,7 @@ export class ActivoService {
     const params = new HttpParams().set('termino', termino);
 
     return this.http.get<ActivoResponse[]>(
-      `${this.url}/api/activos/buscar`,
+      `${this.url}  /buscar`,
       { params }
     );
   }

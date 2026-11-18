@@ -9,7 +9,7 @@
       </p>
     </div>
 
-    @if (esAdmin) {
+    @if (esAdmin || esTecnico) {
     <button class="primary-button" (click)="abrirCrear()">
       + Nueva asistencia
     </button>
@@ -28,7 +28,7 @@
   </div>
   }
 
-  @if (mostrarCrear && esAdmin) {
+  @if (mostrarCrear && (esAdmin || esTecnico)) {
   <section class="panel">
     <div class="panel-heading">
       <div>
